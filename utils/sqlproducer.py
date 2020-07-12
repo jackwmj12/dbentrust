@@ -766,9 +766,9 @@ if __name__ == '__main__':
     from firefly.utils import DefferedErrorHandle
     
     async_sql.init_app({
-        "DB_HOST": "120.55.60.164",
-        "DB_PASSWORD": "Xyq107995",
-        "DB_NAME": "oderaway"
+        "DB_HOST": "",
+        "DB_PASSWORD": "",
+        "DB_NAME": ""
     })
     
     @defer.inlineCallbacks

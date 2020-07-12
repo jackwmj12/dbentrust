@@ -882,7 +882,7 @@ if __name__ == '__main__':
 
     from twisted.internet import reactor
 
-    async_redis.init_app({"REDIS_HOST": "47.97.222.143","REDIS_PASSWORD": "Xyq107995"})
+    async_redis.init_app({"REDIS_HOST": "","REDIS_PASSWORD": ""})
 
     mcharacter.get_all().addCallback(called)
     #
@@ -892,8 +892,8 @@ if __name__ == '__main__':
 
     # class config:
     #     config = {
-    #         "REDIS_PASSWORD": "Xyq107995",
-    #         "REDIS_HOST": "47.97.222.143"
+    #         "REDIS_PASSWORD": "",
+    #         "REDIS_HOST": ""
     #     }
     #
     # async_redis.init_app(config())
