@@ -23,4 +23,9 @@ Created on 2019-11-22
     同步模式则 ASYNC 选择 FALSE 支持 基于 pyredis 模块的封装
 '''
 
-ASYNC = False
+import sys
+
+if "twisted" in sys.modules or "firefly" in sys.modules or "firefly3" in sys.modules:
+	ASYNC = True
+else:
+	ASYNC = False

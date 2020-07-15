@@ -18,13 +18,10 @@ Created on 2019-11-22
                  神兽保佑，代码无BUG!
 @desc：
 	异步mysql操作库的封装
-
-    update on 2020-07-05
 '''
 
 import pymysql
 from twisted.enterprise import adbapi
-
 
 class sqlPipeline(object):
 

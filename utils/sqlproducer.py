@@ -2,7 +2,7 @@
 '''
 Created on 2013-5-8
 
-@author: lan (www.9miao.com)
+@author: joe lin
             ┏┓　　　┏┓
           ┏┛┻━━━┛┻┓
           ┃　　　━　　　┃
@@ -27,7 +27,7 @@ import tokenize
 from collections import Iterable
 from io import StringIO
 from twisted.internet import reactor, defer
-from firefly.exts import async_sql
+from firefly3.exts import async_sql
 
 INSERT = 1
 DELETE = 2
@@ -763,7 +763,7 @@ if __name__ == '__main__':
     
     
     from twisted.internet import reactor, defer
-    from firefly.utils import DefferedErrorHandle
+    from firefly3.utils import DefferedErrorHandle
     
     async_sql.init_app({
         "DB_HOST": "",

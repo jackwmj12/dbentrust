@@ -20,17 +20,15 @@ Created on 2019-11-22
     redis 关系对象
     通过key键的名称前缀来建立
     各个key-value 直接的关系
-
-    update on 2020-07-05
 '''
 from dbentrust import ASYNC
 
 if ASYNC:
-    from firefly.exts import async_redis
-    from firefly.logger import Log
+    from firefly3.exts import async_redis
+    from firefly3.exts.logger import Log
     from twisted.internet import defer
 else:
-    from firefly.exts import async_redis
+    from exts import async_redis
     from dbentrust.utils import defer
     from exts import Log
 
@@ -55,6 +53,19 @@ class MemCache:
 
     def __str__(self):
         return "<{}> : {} ".format(self._tablename_,self.key)
+
+    def setConnection(self,connection):
+        '''
+        设置redis连接池
+        :param connection asyncRedis
+        '''
+        self._connection = connection
+
+    def getConnection(self):
+        '''
+        获取redis连接池
+        '''
+        return self._connection
 
     def keys(self):
         '''
@@ -87,6 +98,7 @@ class MemCache:
         生成redis保存的key
         规则为：外键key + : + _tablename_ + : + 主键
         '''
+
         self._key = ''.join([self._admin, self._tablename_, ':', self._pk])
 
     @property
@@ -98,6 +110,8 @@ class MemCache:
         # Log.debug("使用_key")
         if not self._key:
             # Log.debug("载入/重载_key")
+            # print("载入/重载_key")
+            # print(self._pk)
             self.produceKey()
         return self._key
 
@@ -174,7 +188,7 @@ class MemValue(MemCache):
         '''
         :param pk:主键，一般为数据库内的 id,或者设备名称，编号等唯一值
         '''
-        super().__init__(pk)
+        super(MemValue, self).__init__(pk)
         
         self.value = None
 
@@ -250,7 +264,7 @@ class MemObject(MemCache):
         '''
         :param pk:主键，一般为数据库内的 id,或者设备名称，编号等唯一值
         '''
-        super().__init__(pk)
+        super(MemObject, self).__init__(pk)
     
     def __str__(self):
         return "<{}> : {} 数据为:\n {}".format(self._tablename_,self.key, dict(self))
@@ -498,7 +512,7 @@ class MemAdmin(MemObject):
         root节点
         :param pk :Mode主键，以此区分不同对象
         '''
-        MemObject.__init__(self, pk)
+        super(MemAdmin, self).__init__(pk)
 
     def build_leaf(self,leaf,fk,dict):
         '''
@@ -574,7 +588,7 @@ class MemAdmin(MemObject):
             return leaf(pk).setFK(self.key, self._pk).get_multi2dic(*keys)
         
     @defer.inlineCallbacks
-    def get_leafs_by_relation(self,relation,pk="",start=0,count=1000):
+    def get_leafs_by_relation(self,relation,pk="",start=0,pattern = "*",count=1000):
         '''
         通过 relation 表 取出所有外键相关key名称
         :param relation_name:
@@ -582,7 +596,7 @@ class MemAdmin(MemObject):
         '''
         ret = []
         relation = relation(pk).setFK(self.key, self._pk)
-        leafsnames = yield relation.get_leafs_by_relation(start, count)
+        leafsnames = yield relation.get_leafs_by_relation(start,pattern,count)
         for leafsname in leafsnames:
             leaf = relation.name2object(leafsname)
             if leaf != None:
@@ -590,18 +604,18 @@ class MemAdmin(MemObject):
         defer.returnValue(ret)
 
     @defer.inlineCallbacks
-    def get_leafnames_by_relation(self, relation, pk="", start=0, count=1000):
+    def get_leafnames_by_relation(self, relation, pk="", start=0,pattern = "*", count=1000):
         '''
 		通过 relation 表 取出所有外键相关key名称
 		:param relation_name:
 		:return:
 		'''
         relation = relation(pk).setFK(self.key, self._pk)
-        ret = yield relation.get_leafs_by_relation(start, count)
+        ret = yield relation.get_leafs_by_relation(start,pattern, count)
         defer.returnValue(ret)
 
     @defer.inlineCallbacks
-    def add_leafs_on_relation(self,relation,leafs,pk=""):
+    def add_leafs_on_relation(self,relation,*leafs,pk=""):
         '''
         往 relation 表下 添加外键元素
         :param relation:
@@ -610,7 +624,7 @@ class MemAdmin(MemObject):
         :return:
         '''
         relation = relation(pk).setFK(self.key, self._pk)
-        ret = yield relation.add_leafs_on_relation(leafs)
+        ret = yield relation.add_leafs_on_relation(*leafs)
         defer.returnValue(ret)
         
     @defer.inlineCallbacks
@@ -657,7 +671,7 @@ class MemAdmin(MemObject):
         通过搜索手段返回内存内所有该对象
         :param start:
         :param count:
-        :return:
+        :return: cls
         '''
         admins = []
         rets = []
@@ -678,25 +692,118 @@ class MemAdmin(MemObject):
                 rets.append(ret_)
         defer.returnValue(rets)
 
-class MemRelation(MemObject):
+class MemSet(MemCache):
     '''
-    内存模型间的中间关系表
-    1 * ADMIN 《-》 N * OBJECT
+    :param
     '''
-    _tablename_ = "MemRelation"
+    _tablename_ = "MemSet"
+
+    def __init__(self, pk=''):
+        '''
+		:param pk :Mode主键，以此区分不同对象
+		'''
+        super(MemSet, self).__init__(pk)
+
+    @defer.inlineCallbacks
+    def count(self):
+        '''
+		获取与左外建相关的所有
+		:return:
+		'''
+        ret = yield self._connection.scard(self.key)
+        defer.returnValue(ret)
+
+    @defer.inlineCallbacks
+    def append(self, *objects):
+        ''':param
+        '''
+        if isinstance(objects, list):
+            if objects and isinstance(objects[0], MemCache):
+                values = [item.key for item in objects]
+            else:
+                values = objects
+        elif isinstance(objects,MemCache):
+            values = objects.key
+        else:
+            values = objects
+
+        locked = yield self.locked()
+        # Log.debug("检查字段是否被锁定")
+        if not locked:
+            # Log.debug("字段检查通过")
+            yield self.lock()
+
+            yield self._connection.sadd(self.key, *values)
+
+            yield self.release()
+
+            defer.returnValue(True)
+        else:
+            defer.returnValue(False)
+
+    @defer.inlineCallbacks
+    def get_all(self,start=0, pattern="*", count=500):
+        '''
+
+        :param
+        '''
+        s = []
+        while True:
+            ret = yield self.scan(start, pattern, count)
+            start, t_ = ret
+            if t_:
+                s += t_
+            if not start:
+                break
+        rets = list(s)
+        defer.returnValue(rets)
+
+    @defer.inlineCallbacks
+    def remove(self,*objects):
+        '''
+        :param
+        '''
+        if isinstance(objects, list):
+            if objects and isinstance(objects[0], MemCache):
+                values = [item.key for item in objects]
+            else:
+                values = objects
+        elif isinstance(objects,MemCache):
+            values = objects.key
+        else:
+            values = objects
+
+        locked = yield self.locked()
+        # Log.debug("检查字段是否被锁定")
+        if not locked:
+            # Log.debug("字段检查通过")
+            yield self.lock()
+
+            yield self._connection.srem(self.key,*values)
+
+            yield self.release()
+
+            defer.returnValue(True)
+        else:
+            defer.returnValue(False)
+
+    @defer.inlineCallbacks
+    def scan(self,cursor=0, match=None, count=None):
+        '''
+        :param
+        '''
+        ret = yield self._connection.sscan(self.key,cursor, match, count)
+        defer.returnValue(ret)
+
+class MemList(MemCache):
+    ''':param'''
+    _tablename_ = "MemList"
 
     def __init__(self, pk=''):
         '''
         :param pk :Mode主键，以此区分不同对象
         '''
-        MemObject.__init__(self, pk)
-
-    def produceKey(self):
-        '''
-        生成redis保存的key
-        规则为：外键key + : + _tablename_ + : + 主键
-        '''
-        self._key =  ''.join([self._admin,self._tablename_])
+        super(MemList, self).__init__(pk)
 
     @defer.inlineCallbacks
     def count(self):
@@ -708,29 +815,29 @@ class MemRelation(MemObject):
         defer.returnValue(ret)
 
     @defer.inlineCallbacks
-    def append(self,objects):
+    def append(self, *objects):
         '''
         往关系表内添加数据
         :param value:
         :return:
         '''
         if isinstance(objects, list):
-            if objects and isinstance(objects[0], str):
-                values = objects
-            elif objects:
+            if objects and isinstance(objects[0], MemCache):
                 values = [item.key for item in objects]
             else:
-                return False
-        else:
+                values = objects
+        elif isinstance(objects,MemCache):
             values = objects.key
-        
+        else:
+            values = objects
+
         locked = yield self.locked()
         # Log.debug("检查字段是否被锁定")
         if not locked:
             # Log.debug("字段检查通过")
             yield self.lock()
 
-            yield self._connection.lpush(self.key, values)
+            yield self._connection.lpush(self.key, *values)
 
             yield self.release()
 
@@ -739,7 +846,7 @@ class MemRelation(MemObject):
             defer.returnValue(False)
 
     @defer.inlineCallbacks
-    def remove_one(self,leaf,count=0):
+    def remove(self, leaf, count=0):
         '''
         移除列表中下标从start开始的
         第一个值为value的数据
@@ -750,18 +857,18 @@ class MemRelation(MemObject):
         :param value:
         :return:
         '''
-        if isinstance(leaf,str):
+        if isinstance(leaf, str):
             value = leaf
         else:
             value = leaf.key
-            
+
         locked = yield self.locked()
         # Log.debug("检查字段是否被锁定")
         if not locked:
             # Log.debug("字段检查通过")
             yield self.lock()
 
-            yield self._connection.lrem(self.key, count,value)
+            yield self._connection.lrem(self.key, count, value)
 
             yield self.release()
 
@@ -770,60 +877,59 @@ class MemRelation(MemObject):
             defer.returnValue(False)
 
     @defer.inlineCallbacks
-    def get_by_index(self,index):
-        ret  = yield self._connection.lindex(self.key,index)
+    def get_by_index(self, index):
+        ret = yield self._connection.lindex(self.key, index)
         defer.returnValue(ret)
-    
+
     @defer.inlineCallbacks
-    def add_leafs_on_relation(self,leafs):
+    def get_all(self, start=0, end=1000):
+        '''
+
+		:param start:
+		:param end:
+		:return:
+		'''
+        # print(self.key)
+        ret = yield self._connection.lrange(self.key, start, end)
+        defer.returnValue(ret)
+
+class MemRelation(MemSet):
+    '''
+    内存模型间的中间关系表
+    1 * ADMIN 《-》 N * OBJECT
+    '''
+    _tablename_ = "MemRelation"
+
+    def __init__(self, pk=''):
+        '''
+        :param pk :Mode主键，以此区分不同对象
+        '''
+        super(MemRelation, self).__init__(pk)
+
+    def produceKey(self):
+        '''
+        生成redis保存的key
+        规则为：外键key + : + _tablename_ + : + 主键
+        '''
+        self._key = ''.join([self._admin, self._tablename_])
+
+    @defer.inlineCallbacks
+    def add_leafs_on_relation(self, *leafs):
         '''
         同 append 方法，往 relation 表内插入 对象列表
         :param leafs:
         :return:
         '''
-        if isinstance(leafs, list):
-            values = [item.key for item in leafs]
-        else:
-            values = leafs.key
-    
-        locked = yield self.locked()
-        # Log.debug("检查字段是否被锁定")
-        if not locked:
-            # Log.debug("字段检查通过")
-            yield self.lock()
-        
-            yield self._connection.lpush(self.key, values)
-        
-            yield self.release()
-        
-            defer.returnValue(True)
-        else:
-            defer.returnValue(False)
-        
-    @defer.inlineCallbacks
-    def get_leafs_by_relation(self, start=0, end=1000):
+        self.append(*leafs)
+
+    def get_leafs_by_relation(self, start=0, pattern="*", count=500):
         '''
-        
+
         :param start:
         :param end:
         :return:
         '''
-        ret = yield self._connection.lrange(self.key, start, end)
-        defer.returnValue(ret)
-
-    def get_all(self):
-        '''
-
-        :return:
-        '''
-        return self.get_leafs_by_relation(start=0,end=1000)
-
-    def get_all2dic(self):
-        '''
-
-        :return:
-        '''
-        return self.get_leafs_by_relation(start=0,end=1000)
+        return self.get_all(start, pattern, count)
 
     @defer.inlineCallbacks
     def names2leafs(self, leafnames):
@@ -838,7 +944,7 @@ class MemRelation(MemObject):
                 sensors += yield sensor_.get_all2dic()
         return sensors
 
-    def name2object(self,name):
+    def name2object(self, name):
         '''
         调用该函数可以通过内存中的key值
         转换成对应的mem对象
@@ -847,61 +953,3 @@ class MemRelation(MemObject):
         :return:
         '''
 
-if __name__ == '__main__':
-    '''
-    测试代码
-    '''
-    
-    class Mcharacter(MemObject):
-        _tablename_ = "mcharacter"
-
-        def __init__(self,name):
-            MemObject.__init__(self,name)
-            self.nickname = ""
-            self.level = 0
-            self.profession = 0
-            self.guanqia = 1
-            
-
-        def keys(self):
-            return ("nickname","level","profession","guanqia")
-
-        def __getitem__(self, item):
-            return getattr(self, item)
-
-
-    def called(result):
-        print(result)
-
-    mcharacter = Mcharacter("joe")
-    mcharacter.nickname = 'LCC'
-    mcharacter.level = 175
-
-
-    # 异步测试
-
-    from twisted.internet import reactor
-
-    async_redis.init_app({"REDIS_HOST": "","REDIS_PASSWORD": ""})
-
-    mcharacter.get_all().addCallback(called)
-    #
-    reactor.run()
-
-    # 同步测试
-
-    # class config:
-    #     config = {
-    #         "REDIS_PASSWORD": "",
-    #         "REDIS_HOST": ""
-    #     }
-    #
-    # async_redis.init_app(config())
-    # mcharacter.insert_without_sync()
-    # print(mcharacter.get_all())
-
-
-    
-    
-        
-        
