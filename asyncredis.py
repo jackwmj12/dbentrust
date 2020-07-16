@@ -368,13 +368,14 @@ class asyncRedis(object):
         return self.decr(name,amount)
 
     @defer.inlineCallbacks
-    def append(self, key, value):
+    def append(self, name, *values):
         '''
         如果 key 已经存在并且是一个字符串，
         APPEND 命令将指定的 value 追加到该 key 原来值（value）的末尾。
         :param
         '''
-        ret = yield self.redis_conn.append(key, value)
+        print(12*"*",name,values)
+        ret = yield self.redis_conn.append(name, *values)
         defer.returnValue(ret)
 
     @defer.inlineCallbacks
@@ -647,13 +648,16 @@ class asyncRedis(object):
         defer.returnValue(ret)
     
     @defer.inlineCallbacks
-    def sadd(self,key,*value):
+    def sadd(self,key,*values):
         '''
         向集合添加一个或多个成员
         :param
         '''
-        ret = yield self.redis_conn.sadd(key,*value)
-        defer.returnValue(ret)
+        try:
+            ret = yield self.redis_conn.sadd(key,*values)
+            defer.returnValue(ret)
+        except Exception as e:
+            print(e)
 
     @defer.inlineCallbacks
     def sdiff(self,key1,*keys):

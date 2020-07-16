@@ -32,6 +32,25 @@ else:
     from dbentrust.utils import defer
     from exts import Log
 
+class MemConnectionManager:
+    _connection = async_redis
+
+    @classmethod
+    def setConnection(cls,connection):
+        '''
+        设置redis连接池
+        :param connection asyncRedis
+        '''
+        print("switch to {}".format(connection))
+        cls._connection = connection
+
+    @classmethod
+    def getConnection(cls):
+        '''
+        获取redis连接池
+        '''
+        return cls._connection
+
 class MemCache:
     '''
      内存数据模型（value）
@@ -42,36 +61,23 @@ class MemCache:
         '''
         :param pk:主键，一般为数据库内的 id,或者设备名称，编号等唯一值
         '''
-        self._connection = async_redis
         self._fk = 0
         self._admin = ""
         self._pk = str(pk)
         self._lock = 0
         self.sync_count = 10
-    
+
         self._key = None
 
     def __str__(self):
         return "<{}> : {} ".format(self._tablename_,self.key)
 
-    def setConnection(self,connection):
-        '''
-        设置redis连接池
-        :param connection asyncRedis
-        '''
-        self._connection = connection
-
-    def getConnection(self):
-        '''
-        获取redis连接池
-        '''
-        return self._connection
-
     def keys(self):
         '''
         返回一个tuple，该tuple决定了dict(self)所用到的键值
-        :return:
+        :return
         '''
+        return ()
         
     def setPK(self, pk):
         '''
@@ -119,30 +125,30 @@ class MemCache:
         '''
         检测对象是否被锁定
         '''
-        # return self._connection.get(self.key+"_lock")
+        # return MemConnectionManager.getConnection().get(self.key+"_lock")
         return False
 
     def lock(self):
         '''
         锁定对象,暂定最长锁定时间为2S
         '''
-        # return self._connection.set(self.key+"_lock", 1,2)
+        # return MemConnectionManager.getConnection().set(self.key+"_lock", 1,2)
 
     def release(self):
         '''
         释放锁
         '''
-        # return self._connection.delete(self.key+"_lock")
+        # return MemConnectionManager.getConnection().delete(self.key+"_lock")
 
     def is_exist(self):
-        return self._connection.exist(self.key)
+        return MemConnectionManager.getConnection().exist(self.key)
 
     def dbsize(self):
         '''
 
         :return:
         '''
-        return self._connection.dbsize()
+        return MemConnectionManager.getConnection().dbsize()
 
     @defer.inlineCallbacks
     def delete(self):
@@ -155,7 +161,7 @@ class MemCache:
             # Log.debug("字段检查通过")
             yield self.lock()
             # Log.debug("拼接字段名称:{}".format(name))
-            ret = yield self._connection.delete(self.key)
+            ret = yield MemConnectionManager.getConnection().delete(self.key)
             # Log.debug("设置字段值{}:{}".format(key,value))
             yield self.release()
             # Log.debug("解锁字段")
@@ -170,10 +176,10 @@ class MemCache:
         :param ex:
         :return:
         '''
-        return self._connection.expire(self.key, ex)
+        return MemConnectionManager.getConnection().expire(self.key, ex)
 
     def ttl(self):
-        return self._connection.ttl(self.key)
+        return MemConnectionManager.getConnection().ttl(self.key)
     
     def __getitem__(self, item):
         return getattr(self, item)
@@ -201,7 +207,7 @@ class MemValue(MemCache):
         针对单键值
         :return:
         '''
-        ret = yield self._connection.get(self.key)
+        ret = yield MemConnectionManager.getConnection().get(self.key)
         defer.returnValue(ret)
 
     @defer.inlineCallbacks
@@ -215,7 +221,7 @@ class MemValue(MemCache):
             # Log.debug("字段检查通过")
             yield self.lock()
             # Log.debug("拼接字段名称:{}".format(name))
-            ret = yield self._connection.set(self.key, value)
+            ret = yield MemConnectionManager.getConnection().set(self.key, value)
             # Log.debug("设置字段值{}:{}".format(key,value))
             yield self.release()
             # Log.debug("解锁字段")
@@ -230,7 +236,7 @@ class MemValue(MemCache):
         针对单键值
         :return:
         '''
-        ret = yield self._connection.get(self.key)
+        ret = yield MemConnectionManager.getConnection().get(self.key)
         self.value = ret
         defer.returnValue(self)
 
@@ -245,7 +251,7 @@ class MemValue(MemCache):
             # Log.debug("字段检查通过")
             yield self.lock()
             # Log.debug("拼接字段名称:{}".format(name))
-            ret = yield self._connection.set(self.key, self.value)
+            ret = yield MemConnectionManager.getConnection().set(self.key, self.value)
             # Log.debug("设置字段值{}:{}".format(key,value))
             yield self.release()
             # Log.debug("解锁字段")
@@ -276,7 +282,7 @@ class MemObject(MemCache):
         @:param key:需要获取的键值
         @:return str
         '''
-        ret = yield self._connection.hget(self.key, key)
+        ret = yield MemConnectionManager.getConnection().hget(self.key, key)
         if ret is not None:
             defer.returnValue(ret)
         else:
@@ -289,7 +295,7 @@ class MemObject(MemCache):
         @param keys: list(str) key的列表
         :return: dict
         '''
-        values = yield self._connection.hmget(self.key, *keys)
+        values = yield MemConnectionManager.getConnection().hmget(self.key, *keys)
         defer.returnValue(self.get_from_list(*keys, values))
     
     @defer.inlineCallbacks
@@ -299,8 +305,9 @@ class MemObject(MemCache):
         @param keys: list(str) key的列表
         :return: dict
         '''
-        ret = yield self._connection.hmget2dic(self.key, *keys)
-        defer.returnValue(ret)
+        values = yield MemConnectionManager.getConnection().hmget(self.key, *keys)
+        self.get_from_list(*keys, values)
+        defer.returnValue(dict(self))
     
     @defer.inlineCallbacks
     def get_all(self):
@@ -309,7 +316,7 @@ class MemObject(MemCache):
         :return: self
         '''
         keys = self.keys()
-        values = yield self._connection.hmget(self.key, keys)
+        values = yield MemConnectionManager.getConnection().hmget(self.key, keys)
         defer.returnValue(self.get_from_list(keys, values))
 
     @defer.inlineCallbacks
@@ -318,8 +325,10 @@ class MemObject(MemCache):
         获取本对象映射的哈希对象内的所有值（keys里面定义的所有值，而非getall）
         :return: 字典
         '''
-        ret = yield self._connection.hmget2dic(self.key, self.keys())
-        defer.returnValue(ret)
+        keys = self.keys()
+        values = yield MemConnectionManager.getConnection().hmget(self.key, *keys)
+        self.get_from_list(keys, values)
+        defer.returnValue(dict(self))
     
     @defer.inlineCallbacks
     def update(self, key, value):
@@ -332,7 +341,7 @@ class MemObject(MemCache):
             # Log.debug("字段检查通过")
             yield self.lock()
             # Log.debug("拼接字段名称:{}".format(name))
-            ret = yield self._connection.hset(self.key, key, value)
+            ret = yield MemConnectionManager.getConnection().hset(self.key, key, value)
             # Log.debug("设置字段值{}:{}".format(key,value))
             yield self.release()
             # Log.debug("解锁字段")
@@ -352,7 +361,7 @@ class MemObject(MemCache):
             # Log.debug("字段检查通过")
             yield self.lock()
             # Log.debug("拼接字段名称:{}".format(name))
-            ret = yield self._connection.hmset(self.key, mapping)
+            ret = yield MemConnectionManager.getConnection().hmset(self.key, mapping)
             # Log.debug("设置字段值{}:{}".format(name,mapping))
             yield self.release()
             # Log.debug("解锁字段")
@@ -373,7 +382,7 @@ class MemObject(MemCache):
             yield self.lock()
             
             # Log.debug("拼接字段名称:{}".format(name))
-            ret = yield self._connection.hincrby(self.key, key, delta)
+            ret = yield MemConnectionManager.getConnection().hincrby(self.key, key, delta)
             # Log.debug("设置字段值{}:{}".format(key,value))
             yield self.release()
             # Log.debug("解锁字段")
@@ -397,10 +406,10 @@ class MemObject(MemCache):
             
             nowdict = dict(self)
             # Log.debug("拼接字段名称:{}".format(name))
-            yield self._connection.hmset(self.key, nowdict)
+            yield MemConnectionManager.getConnection().hmset(self.key, nowdict)
             # Log.debug("设置字段值{}:{}".format(key,value))
             
-            count = yield self._connection.hincrby(self.key, "_count", 1)
+            count = yield MemConnectionManager.getConnection().hincrby(self.key, "_count", 1)
             
             yield self.release()
             
@@ -413,7 +422,7 @@ class MemObject(MemCache):
     @defer.inlineCallbacks
     def insert_without_sync(self):
         '''插入本对象映射的哈希对象
-		'''
+        '''
         # return self._insert().addCallback(self.syncDB).addErrback(DefferedErrorHandle)
         
         locked = yield self.locked()
@@ -423,7 +432,7 @@ class MemObject(MemCache):
             yield self.lock()
             nowdict = dict(self)
             # Log.debug("拼接字段名称:{}".format(name))
-            yield self._connection.hmset(self.key, nowdict)
+            yield MemConnectionManager.getConnection().hmset(self.key, nowdict)
             # Log.debug("设置字段值{}:{}".format(key,value))
             
             yield self.release()
@@ -552,8 +561,7 @@ class MemAdmin(MemObject):
         :return:
         '''
         return leaf(fk).setFK(self.key, self._pk).get_from_dict(dict).insert()
-    
-    @defer.inlineCallbacks
+
     def is_leaf_exits(self,leaf,fk):
         '''
         :param leaf : 子健对象
@@ -606,10 +614,10 @@ class MemAdmin(MemObject):
     @defer.inlineCallbacks
     def get_leafnames_by_relation(self, relation, pk="", start=0,pattern = "*", count=1000):
         '''
-		通过 relation 表 取出所有外键相关key名称
-		:param relation_name:
-		:return:
-		'''
+        通过 relation 表 取出所有外键相关key名称
+        :param relation_name:
+        :return:
+        '''
         relation = relation(pk).setFK(self.key, self._pk)
         ret = yield relation.get_leafs_by_relation(start,pattern, count)
         defer.returnValue(ret)
@@ -640,12 +648,12 @@ class MemAdmin(MemObject):
         leaf = leaf("").setFK(self.key,self._pk)
         pattern = leaf.key+":"+"*"
         while True:
-            start,t_ = yield async_redis.scan(start,pattern,count)
+            start,t_ = yield MemConnectionManager.getConnection().scan(start,pattern,count)
             if t_:
                 keys += t_
             if not start:
                 break
-        return list(set(keys))
+        defer.returnValue(list(set(keys)))
 
     @defer.inlineCallbacks
     def scan_leafs(self, leaf, start=0, count=1000):
@@ -662,7 +670,7 @@ class MemAdmin(MemObject):
             l_ = leaf().name2object(key)
             if l_:
                 leafs.append(l_)
-        return leafs
+        defer.returnValue(leafs)
 
     @classmethod
     @defer.inlineCallbacks
@@ -675,10 +683,10 @@ class MemAdmin(MemObject):
         '''
         admins = []
         rets = []
-        pattern = cls._tablename_ + "*"
+        pattern = cls._tablename_ + ":*"
         # pattern = cls._tablename_ +"[1,2,3,4,5,6,7,8,9,0]"
         while True:
-            start, t_ = yield async_redis.scan(start, pattern, count)
+            start, t_ = yield MemConnectionManager.getConnection().scan(start, pattern, count)
             if t_:
                 admins += t_
             if not start:
@@ -700,24 +708,24 @@ class MemSet(MemCache):
 
     def __init__(self, pk=''):
         '''
-		:param pk :Mode主键，以此区分不同对象
-		'''
+        :param pk :Mode主键，以此区分不同对象
+        '''
         super(MemSet, self).__init__(pk)
 
     @defer.inlineCallbacks
     def count(self):
         '''
-		获取与左外建相关的所有
-		:return:
-		'''
-        ret = yield self._connection.scard(self.key)
+        获取与左外建相关的所有
+        :return:
+        '''
+        ret = yield MemConnectionManager.getConnection().scard(self.key)
         defer.returnValue(ret)
 
     @defer.inlineCallbacks
     def append(self, *objects):
         ''':param
         '''
-        if isinstance(objects, list):
+        if isinstance(objects, (list,tuple)):
             if objects and isinstance(objects[0], MemCache):
                 values = [item.key for item in objects]
             else:
@@ -733,7 +741,7 @@ class MemSet(MemCache):
             # Log.debug("字段检查通过")
             yield self.lock()
 
-            yield self._connection.sadd(self.key, *values)
+            yield MemConnectionManager.getConnection().sadd(self.key, *values)
 
             yield self.release()
 
@@ -742,15 +750,16 @@ class MemSet(MemCache):
             defer.returnValue(False)
 
     @defer.inlineCallbacks
-    def get_all(self,start=0, pattern="*", count=500):
+    def get_all(self,start=0, pattern=None, count=500):
         '''
 
         :param
         '''
+        # print(32"")
+
         s = []
         while True:
-            ret = yield self.scan(start, pattern, count)
-            start, t_ = ret
+            start, t_ = yield MemConnectionManager.getConnection().sscan(self.key,start, pattern, count)
             if t_:
                 s += t_
             if not start:
@@ -763,7 +772,7 @@ class MemSet(MemCache):
         '''
         :param
         '''
-        if isinstance(objects, list):
+        if isinstance(objects, (list,tuple)):
             if objects and isinstance(objects[0], MemCache):
                 values = [item.key for item in objects]
             else:
@@ -779,21 +788,13 @@ class MemSet(MemCache):
             # Log.debug("字段检查通过")
             yield self.lock()
 
-            yield self._connection.srem(self.key,*values)
+            yield MemConnectionManager.getConnection().srem(self.key,*values)
 
             yield self.release()
 
             defer.returnValue(True)
         else:
             defer.returnValue(False)
-
-    @defer.inlineCallbacks
-    def scan(self,cursor=0, match=None, count=None):
-        '''
-        :param
-        '''
-        ret = yield self._connection.sscan(self.key,cursor, match, count)
-        defer.returnValue(ret)
 
 class MemList(MemCache):
     ''':param'''
@@ -811,7 +812,7 @@ class MemList(MemCache):
         获取与左外建相关的所有
         :return:
         '''
-        ret = yield self._connection.llen(self.key)
+        ret = yield MemConnectionManager.getConnection().llen(self.key)
         defer.returnValue(ret)
 
     @defer.inlineCallbacks
@@ -821,7 +822,7 @@ class MemList(MemCache):
         :param value:
         :return:
         '''
-        if isinstance(objects, list):
+        if isinstance(objects, (list,tuple)):
             if objects and isinstance(objects[0], MemCache):
                 values = [item.key for item in objects]
             else:
@@ -837,7 +838,7 @@ class MemList(MemCache):
             # Log.debug("字段检查通过")
             yield self.lock()
 
-            yield self._connection.lpush(self.key, *values)
+            yield MemConnectionManager.getConnection().lpush(self.key, *values)
 
             yield self.release()
 
@@ -868,7 +869,7 @@ class MemList(MemCache):
             # Log.debug("字段检查通过")
             yield self.lock()
 
-            yield self._connection.lrem(self.key, count, value)
+            yield MemConnectionManager.getConnection().lrem(self.key, count, value)
 
             yield self.release()
 
@@ -878,19 +879,19 @@ class MemList(MemCache):
 
     @defer.inlineCallbacks
     def get_by_index(self, index):
-        ret = yield self._connection.lindex(self.key, index)
+        ret = yield MemConnectionManager.getConnection().lindex(self.key, index)
         defer.returnValue(ret)
 
     @defer.inlineCallbacks
     def get_all(self, start=0, end=1000):
         '''
 
-		:param start:
-		:param end:
-		:return:
-		'''
+        :param start:
+        :param end:
+        :return:
+        '''
         # print(self.key)
-        ret = yield self._connection.lrange(self.key, start, end)
+        ret = yield MemConnectionManager.getConnection().lrange(self.key, start, end)
         defer.returnValue(ret)
 
 class MemRelation(MemSet):
