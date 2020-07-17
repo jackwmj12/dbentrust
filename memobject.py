@@ -295,8 +295,8 @@ class MemObject(MemCache):
         @param keys: list(str) key的列表
         :return: dict
         '''
-        values = yield MemConnectionManager.getConnection().hmget(self.key, *keys)
-        defer.returnValue(self.get_from_list(*keys, values))
+        values = yield MemConnectionManager.getConnection().hmget(self.key, keys)
+        defer.returnValue(self.get_from_list(keys, values))
     
     @defer.inlineCallbacks
     def get_multi2dic(self, *keys):
@@ -305,9 +305,9 @@ class MemObject(MemCache):
         @param keys: list(str) key的列表
         :return: dict
         '''
-        values = yield MemConnectionManager.getConnection().hmget(self.key, *keys)
-        self.get_from_list(*keys, values)
-        defer.returnValue(dict(self))
+        values = yield MemConnectionManager.getConnection().hmget(self.key, keys)
+        self.get_from_list(keys, values)
+        defer.returnValue(dict([(key,dict(self)[key]) for key in keys]))
     
     @defer.inlineCallbacks
     def get_all(self):
@@ -326,7 +326,7 @@ class MemObject(MemCache):
         :return: 字典
         '''
         keys = self.keys()
-        values = yield MemConnectionManager.getConnection().hmget(self.key, *keys)
+        values = yield MemConnectionManager.getConnection().hmget(self.key, keys)
         self.get_from_list(keys, values)
         defer.returnValue(dict(self))
     
@@ -531,7 +531,9 @@ class MemAdmin(MemObject):
         :param dict:   字典数据
         :return: MemObject 及其子类
         '''
-        ret = leaf(fk).setFK(self.key,self._pk).get_from_dict(dict)
+        ret = leaf(fk).setFK(self.key, self._pk)
+        if dict:
+            ret.get_from_dict(dict)
         return ret
     
     def build_empty_leaf(self,leaf,fk=""):
@@ -569,8 +571,7 @@ class MemAdmin(MemObject):
         :return:
         '''
         return leaf(fk).setFK(self.key, self._pk).is_exist()
-    
-    @defer.inlineCallbacks
+
     def get_leaf(self,leaf,pk="",*keys):
         '''
         根据外键fk 获取单个外键相关对象
@@ -578,11 +579,11 @@ class MemAdmin(MemObject):
         :return:
         '''
         if not keys:
-            ret = yield leaf(pk).setFK(self.key,self._pk).get_all()
+            ret = leaf(pk).setFK(self.key,self._pk).get_all()
         else:
-            ret = yield leaf(pk).setFK(self.key,self._pk).get_multi(*keys)
+            ret = leaf(pk).setFK(self.key,self._pk).get_multi(*keys)
             # ret = leaf.get_from_dict(ret_)
-        defer.returnValue(ret)
+        return ret
 
     def get_leaf2dic(self,leaf,pk="",*keys):
         '''

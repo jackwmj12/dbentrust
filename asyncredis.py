@@ -262,6 +262,7 @@ class asyncRedis(object):
         :param args:
         :return:
         '''
+        print(args)
         ret = yield self.redis_conn.hmget(name,*args)
         defer.returnValue(ret)
 
