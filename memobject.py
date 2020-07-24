@@ -87,6 +87,9 @@ class MemCache:
         '''
         self._pk = pk
 
+    def getPk(self):
+        return self._pk
+
     def setFK(self, admin, fk):
         '''
         设置外键，若是关联数据，需要设置管理对象的id
@@ -895,6 +898,142 @@ class MemList(MemCache):
         ret = yield MemConnectionManager.getConnection().lrange(self.key, start, end)
         defer.returnValue(ret)
 
+class MemSortedSet(MemCache):
+    '''
+    :param
+    '''
+    _tablename_ = "MemSortedSet"
+
+    def __init__(self,pk=""):
+        super(MemSortedSet, self).__init__(pk)
+
+    def addMemByEntrust(self,mem,value):
+        if isinstance(mem,MemCache):
+            src = {
+                mem.key:value
+            }
+        elif isinstance(mem,str):
+            src={
+                mem:value
+            }
+        else:
+            raise Exception("mem type error")
+        return MemConnectionManager.getConnection().zadd(self.key,src)
+
+    def addMem(self,*mems):
+        return MemConnectionManager.getConnection().zadd(self.key,*mems)
+
+    def getCount(self):
+        return MemConnectionManager.getConnection().zcard(self.key)
+
+    def getMemCountInScoreRange(self,min, max):
+        return MemConnectionManager.getConnection().zcount(self.key,min,max)
+
+    def addScoreToMem(self,mem,amount):
+        if isinstance(mem,MemCache):
+            mem = mem.key
+        elif isinstance(mem,str):
+            pass
+        else :
+            raise Exception("mem type error")
+        return MemConnectionManager.getConnection().zincrby(self.key,mem,amount)
+
+    def getMemsByIndex(self,start, end, desc=False, withscores=True,
+               score_cast_func=float):
+        return MemConnectionManager.getConnection().zrange(
+            self.key,start, end,desc=desc, withscores=withscores,
+            score_cast_func=score_cast_func
+        )
+
+    def getMemsByScoreRange(self,min, max, start=0, num=100,
+                      withscores=False, score_cast_func=float):
+        return MemConnectionManager.getConnection().zrangebyscore(
+            self.key,min, max, start=start, num=num,
+            withscores=withscores, score_cast_func=score_cast_func
+        )
+
+    def getIndexOfMem(self,mem):
+        if isinstance(mem,MemCache):
+            mem = mem.key
+        elif isinstance(mem,str):
+            pass
+        else :
+            raise Exception("mem type error")
+        return MemConnectionManager.getConnection().zrank(
+            self.key,mem
+        )
+
+    def getMemsByMemRange(self,min, max, start=None, num=None):
+        '''
+        :param
+        '''
+        return MemConnectionManager.getConnection().zrangebylex(self.key, min, max, start=None, num=None)
+
+    def getMemsByIndexSortedByScore(self,start, end, withscores=False,
+                  score_cast_func=float):
+        '''
+        :param
+        '''
+        return MemConnectionManager.getConnection().zrevrange(self.key, start, end, withscores,
+                  score_cast_func)
+
+    def getMemsByScoreSortedByScore(self,max, min,start=0, num=100, withscores=False,score_cast_func=float):
+        '''
+        :param
+        '''
+        return MemConnectionManager.getConnection().zrevrangebyscore(self.key, max, min,start, num, withscores,
+                  score_cast_func)
+
+    def removeMems(self,*mems):
+        return MemConnectionManager.getConnection().zrem(
+            self.key,*mems
+        )
+
+    def removeMemsByIndex(self,min, max):
+        ''':param'''
+        return MemConnectionManager.getConnection().zremrangebyrank(self.key, min, max)
+
+    def removeMemsByScoreRange(self,min, max):
+        ''':param'''
+        return MemConnectionManager.getConnection().zremrangebyscore(self.key, min, max)
+
+    def getRankOfMem(self,mem):
+        ''':param'''
+        if isinstance(mem,MemCache):
+            mem = mem.key
+        elif isinstance(mem,str):
+            pass
+        else :
+            raise Exception("mem type error")
+        return MemConnectionManager.getConnection().zrevrank(self.key,mem)
+
+    def getScoreOfMem(self,mem):
+        if isinstance(mem,MemCache):
+            mem = mem.key
+        elif isinstance(mem,str):
+            pass
+        else :
+            raise Exception("mem type error")
+        return MemConnectionManager.getConnection().zscore(self.key,mem)
+
+    @defer.inlineCallbacks
+    def get_all(self, match="*", count=100, score_cast_func=float):
+        '''
+		:param
+		'''
+        i_ = 0
+        mems = []
+        while True:
+            i_, mem_ = yield MemConnectionManager.getConnection().zscan(
+                self.key, cursor=i_, match=match, count=count,
+                score_cast_func=score_cast_func
+            )
+            mems += mem_
+            if i_ == 0:
+                break
+
+        defer.returnValue(mems)
+
 class MemRelation(MemSet):
     '''
     内存模型间的中间关系表
@@ -954,4 +1093,8 @@ class MemRelation(MemSet):
         因为该方法只能返回 Object 对象
         :return:
         '''
+
+
+if __name__ == '__main__':
+    ''':param'''
 
