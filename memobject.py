@@ -310,7 +310,8 @@ class MemObject(MemCache):
         '''
         values = yield MemConnectionManager.getConnection().hmget(self.key, keys)
         self.get_from_list(keys, values)
-        defer.returnValue(dict([(key,dict(self)[key]) for key in keys]))
+        ret = {key:self.__getitem__(key) for key in keys}
+        defer.returnValue(ret)
     
     @defer.inlineCallbacks
     def get_all(self):
