@@ -19,6 +19,7 @@ Created on 2019-11-22
 @desc：
 	异步mysql操作库的封装
 '''
+from typing import Any
 
 import pymysql
 from twisted.enterprise import adbapi
@@ -48,7 +49,7 @@ class sqlPipeline(object):
 		pool = adbapi.ConnectionPool('pymysql', **connkw)
 		return cls(pool)
 
-	def init_app(self,config):
+	def init_app(self,config:Any):
 		'''
 				初始化数据库异步连接池
 				:param config: 配置对象

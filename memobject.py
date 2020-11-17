@@ -21,13 +21,15 @@ Created on 2019-11-22
     通过key键的名称前缀来建立
     各个key-value 直接的关系
 '''
-from dbentrust import ASYNC
+from typing import Dict
 
-if ASYNC:
+from dbentrust.redis_module import redisModule
+
+if redisModule.name == "txredisapi":
     from firefly3.exts import async_redis
     from firefly3.exts.logger import Log
     from twisted.internet import defer
-else:
+elif redisModule.name == "redis":
     from exts import async_redis
     from dbentrust.utils import defer
     from exts import Log
@@ -41,7 +43,7 @@ class MemConnectionManager:
         设置redis连接池
         :param connection asyncRedis
         '''
-        print("switch to {}".format(connection))
+        Log.debug("switch to {}".format(connection))
         cls._connection = connection
 
     @classmethod
@@ -56,6 +58,7 @@ class MemCache:
      内存数据模型（value）
     '''
     _tablename_ = "Mem"
+    _name_ = None
 
     def __init__(self, pk):
         '''
@@ -107,8 +110,10 @@ class MemCache:
         生成redis保存的key
         规则为：外键key + : + _tablename_ + : + 主键
         '''
-
-        self._key = ''.join([self._admin, self._tablename_, ':', self._pk])
+        if self._pk:
+            self._key = ''.join([self._admin, self._tablename_, ':', self._pk])
+        else:
+            self._key = ''.join([self._admin, self._tablename_])
 
     @property
     def key(self):
@@ -192,6 +197,7 @@ class MemValue(MemCache):
      内存数据模型（hash）
     '''
     _tablename_ = "MemValue"
+    _name_ = "MemValue"
 
     def __init__(self, pk):
         '''
@@ -268,6 +274,12 @@ class MemObject(MemCache):
      内存数据模型（hash）
     '''
     _tablename_ = "MemObject"
+
+    _name_ = ""
+
+    _zh_name_ = ""
+    _type_ = ""
+    _unit_ = ""
     
     def __init__(self, pk):
         '''
@@ -277,9 +289,22 @@ class MemObject(MemCache):
     
     def __str__(self):
         return "<{}> : {} 数据为:\n {}".format(self._tablename_,self.key, dict(self))
-    
+
+    @classmethod
+    @property
+    def name(self):
+        return self._name_
+
+    @classmethod
+    @property
+    def zh_name(self):
+        return self._zh_name_
+
+    def get_local(self,key,default,type=str):
+        return type(getattr(self,key,default))
+
     @defer.inlineCallbacks
-    def get(self, key, default=None):
+    def get(self, key, default=None,type=str):
         '''
         本对象映射的哈希对象内的某个key值
         @:param key:需要获取的键值
@@ -287,7 +312,7 @@ class MemObject(MemCache):
         '''
         ret = yield MemConnectionManager.getConnection().hget(self.key, key)
         if ret is not None:
-            defer.returnValue(ret)
+            defer.returnValue(type(ret))
         else:
             defer.returnValue(default)
     
@@ -324,7 +349,7 @@ class MemObject(MemCache):
         defer.returnValue(self.get_from_list(keys, values))
 
     @defer.inlineCallbacks
-    def get_all2dic(self):
+    def get_all2dic(self) -> Dict:
         '''
         获取本对象映射的哈希对象内的所有值（keys里面定义的所有值，而非getall）
         :return: 字典
@@ -409,9 +434,9 @@ class MemObject(MemCache):
             yield self.lock()
             
             nowdict = dict(self)
-            # Log.debug("拼接字段名称:{}".format(name))
+            # Log.debug("拼接字段名称:{}".format(self.key))
             yield MemConnectionManager.getConnection().hmset(self.key, nowdict)
-            # Log.debug("设置字段值{}:{}".format(key,value))
+            # Log.debug("设置字段值{}".format(nowdict))
             
             count = yield MemConnectionManager.getConnection().hincrby(self.key, "_count", 1)
             
@@ -458,11 +483,13 @@ class MemObject(MemCache):
                 Log.debug("%s <%s>:已到同步时间：%s" % (self.__class__.__name__,self._pk, count))
                 yield self.update("_count", 0)
                 yield self.saveDB()
+                defer.returnValue(True)
             else:
                 Log.debug("%s :还未到同步时间：%s" % (self.__class__.__name__, count))
+                defer.returnValue(False)
         else:
             # Log.err("syncDB:该字段被锁定")
-            return False
+            defer.returnValue(False)
     
     @defer.inlineCallbacks
     def saveDB(self):
@@ -470,6 +497,7 @@ class MemObject(MemCache):
         同步数据库操作，需要重写该函数
         :return:
         '''
+        defer.returnValue(None)
     
     def get_from_dict(self, dic):
         '''
@@ -492,7 +520,7 @@ class MemObject(MemCache):
             if values[i] != None:
                 setattr(self, key, values[i])
         return self
-    
+
     def name2object(self, name):
         '''
         调用该函数可以通过redis中的key值
@@ -513,6 +541,55 @@ class MemObject(MemCache):
         :return:
         '''
         return None
+
+    @classmethod
+    @defer.inlineCallbacks
+    def scan(cls, start=0, count=1000):
+        '''
+        通过搜索手段返回内存内所有该对象
+        :param start:
+        :param count:
+        :return: cls
+        '''
+        admins = []
+        rets = []
+        pattern = cls._tablename_ + ":*"
+        # pattern = cls._tablename_ +"[1,2,3,4,5,6,7,8,9,0]"
+        while True:
+            start, t_ = yield MemConnectionManager.getConnection().scan(start, pattern, count)
+            if t_:
+                admins += t_
+            if not start:
+                break
+        ret = list(set(admins))
+        for item in ret:
+            split_item = item.split(":")
+            if len(split_item) == 2:
+                name_, id_ = split_item
+                ret_ = cls(id_)
+                rets.append(ret_)
+        defer.returnValue(rets)
+
+    @classmethod
+    @defer.inlineCallbacks
+    def scan2Name(cls, start=0, count=1000):
+        '''
+        通过搜索手段返回内存内所有该对象名称
+        :param start:
+        :param count:
+        :return: cls
+        '''
+        admins = []
+        pattern = cls._tablename_ + ":*"
+        # pattern = cls._tablename_ +"[1,2,3,4,5,6,7,8,9,0]"
+        while True:
+            start, t_ = yield MemConnectionManager.getConnection().scan(start, pattern, count)
+            if t_:
+                admins += t_
+            if not start:
+                break
+        ret = list(set(admins))
+        defer.returnValue(ret)
 
 class MemAdmin(MemObject):
     '''
@@ -677,34 +754,6 @@ class MemAdmin(MemObject):
                 leafs.append(l_)
         defer.returnValue(leafs)
 
-    @classmethod
-    @defer.inlineCallbacks
-    def scan(cls, start=0, count=1000):
-        '''
-        通过搜索手段返回内存内所有该对象
-        :param start:
-        :param count:
-        :return: cls
-        '''
-        admins = []
-        rets = []
-        pattern = cls._tablename_ + ":*"
-        # pattern = cls._tablename_ +"[1,2,3,4,5,6,7,8,9,0]"
-        while True:
-            start, t_ = yield MemConnectionManager.getConnection().scan(start, pattern, count)
-            if t_:
-                admins += t_
-            if not start:
-                break
-        ret = list(set(admins))
-        for item in ret:
-            split_item = item.split(":")
-            if len(split_item) == 2:
-                name_, id_ = split_item
-                ret_ = cls(id_)
-                rets.append(ret_)
-        defer.returnValue(rets)
-
 class MemSet(MemCache):
     '''
     :param
@@ -740,17 +789,21 @@ class MemSet(MemCache):
         else:
             values = objects
 
-        locked = yield self.locked()
-        # Log.debug("检查字段是否被锁定")
-        if not locked:
-            # Log.debug("字段检查通过")
-            yield self.lock()
+        if values:
 
-            yield MemConnectionManager.getConnection().sadd(self.key, *values)
+            locked = yield self.locked()
+            # Log.debug("检查字段是否被锁定")
+            if not locked:
+                # Log.debug("字段检查通过")
+                yield self.lock()
 
-            yield self.release()
+                yield MemConnectionManager.getConnection().sadd(self.key, *values)
 
-            defer.returnValue(True)
+                yield self.release()
+
+                defer.returnValue(True)
+            else:
+                defer.returnValue(False)
         else:
             defer.returnValue(False)
 
@@ -760,7 +813,6 @@ class MemSet(MemCache):
 
         :param
         '''
-        # print(32"")
 
         s = []
         while True:
@@ -1020,8 +1072,8 @@ class MemSortedSet(MemCache):
     @defer.inlineCallbacks
     def get_all(self, match="*", count=100, score_cast_func=float):
         '''
-		:param
-		'''
+        :param
+        '''
         i_ = 0
         mems = []
         while True:
@@ -1041,6 +1093,8 @@ class MemRelation(MemSet):
     1 * ADMIN 《-》 N * OBJECT
     '''
     _tablename_ = "MemRelation"
+    _leafs_ = []
+    _root_ = None
 
     def __init__(self, pk=''):
         '''
@@ -1088,13 +1142,38 @@ class MemRelation(MemSet):
 
     def name2object(self, name):
         '''
-        调用该函数可以通过内存中的key值
-        转换成对应的mem对象
-        若是relation对象，则需要重写该方法
-        因为该方法只能返回 Object 对象
-        :return:
+        :return
         '''
+        t = name.split(":")
+        if len(t) == 5:
+            # 'admin':'pk':'realation':'leaf':'index'
+            admin, pk, relation, type, index = t
+            for leaf in self._leafs_:
+                if type == leaf._name_:
+                    return leaf(index).setFK(admin + ":" + pk, pk)
+        elif len(t) == 3:
+            # 'realation':'leaf':'index'
+            _, type, index = t
+            for leaf in self._leafs_:
+                if type == leaf._name_:
+                    return leaf(index)
+        return None
 
+    @classmethod
+    def register_leafs(cls,*leafs:MemCache):
+        '''
+        :return
+        '''
+        if leafs:
+            cls._leafs_ += leafs
+
+    @classmethod
+    def register_root(cls,root:MemAdmin):
+        '''
+        :return
+        '''
+        if root:
+            cls._root_ = root
 
 if __name__ == '__main__':
     ''':param'''

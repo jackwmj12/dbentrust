@@ -20,12 +20,12 @@ Created on 2019-11-22
 @desc：
     异步redis操作库的封装
 '''
-from dbentrust import ASYNC
+from dbentrust.redis_module import redisModule
 
-if ASYNC:
+if redisModule.name == "txredisapi":
     import txredisapi as redis
     from twisted.internet import defer
-else:
+elif redisModule.name == "redis":
     import redis
     from redis import Redis
     from dbentrust.utils import defer
@@ -36,14 +36,14 @@ class asyncRedis(object):
     def __init__(self,redis_conn=None):
         self.redis_conn = redis_conn
 
-    if ASYNC:
+    if redisModule.name == "txredisapi":
         def init_app(self,config):
             self.redis_conn = redis.lazyConnectionPool(
                 host=config.get("REDIS_HOST", "127.0.0.1"), password=config.get("REDIS_PASSWORD", None),
                 port=config.get("REDIS_PORT", 6379),charset=config.get("REDIS_DECODE_RESPONSES", "utf-8"),
                 connectTimeout=config.get("REDIS_CONNECT_TIMEOUT",10),
                 dbid=config.get("REDIS_DB_ID",None),poolsize=config.get("REDIS_POOL_SIZE",3))
-    else:
+    elif redisModule.name == "redis":
         def init_app(self, app):
             try:
                 self.redis_conn = Redis(
@@ -765,7 +765,7 @@ class asyncRedis(object):
         ret = yield self.redis_conn.sscan(key, cursor, match, count)
         defer.returnValue(ret)
 
-    if ASYNC:
+    if redisModule.name == "txredisapi":
         @defer.inlineCallbacks
         def zadd(self, name, *args):
             '''
@@ -779,7 +779,7 @@ class asyncRedis(object):
                     pieces.append(mem[0])
             ret = yield self.redis_conn.zadd(name,*pieces)
             defer.returnValue(ret)
-    else:
+    elif redisModule.name == "redis":
         @defer.inlineCallbacks
         def zadd(self, name, *args):
             '''
@@ -834,7 +834,7 @@ class asyncRedis(object):
         ret = yield self.redis_conn.zlexcount(name, min, max)
         defer.returnValue(ret)
 
-    if ASYNC:
+    if redisModule.name == "txredisapi":
         @defer.inlineCallbacks
         def zrange(self, name, start, end, desc=False, withscores=False,
                    score_cast_func=float):
@@ -844,7 +844,7 @@ class asyncRedis(object):
             '''
             ret = yield self.redis_conn._zrange(name, start, end,withscores=withscores,reverse=desc)
             defer.returnValue(ret)
-    else:
+    elif redisModule.name == "redis":
         @defer.inlineCallbacks
         def zrange(self, name, start, end, desc=False, withscores=False,
                    score_cast_func=float):
@@ -856,7 +856,7 @@ class asyncRedis(object):
                    desc=desc, withscores=withscores,score_cast_func=score_cast_func)
             defer.returnValue(ret)
 
-    if ASYNC:
+    if redisModule.name == "txredisapi":
         @defer.inlineCallbacks
         def zrangebylex(self, name, min, max, start=None, num=None):
             '''
@@ -864,7 +864,7 @@ class asyncRedis(object):
 			:param
 			'''
             raise Exception("no method 'zrangebylex'")
-    else:
+    elif redisModule.name == "redis":
         @defer.inlineCallbacks
         def zrangebylex(self, name, min, max, start=None, num=None):
             '''
@@ -874,7 +874,7 @@ class asyncRedis(object):
             ret = yield self.redis_conn.zrangebylex(name, min, max, start, num)
             defer.returnValue(ret)
 
-    if ASYNC:
+    if redisModule.name == "txredisapi":
         @defer.inlineCallbacks
         def zrangebyscore(self, name, min, max, start=None, num=None,
                           withscores=False, score_cast_func=float):
@@ -885,7 +885,7 @@ class asyncRedis(object):
             ret = yield self.redis_conn.zrangebyscore(name, min, max, offset=start, count=num,
                           withscores=withscores)
             defer.returnValue(ret)
-    else:
+    elif redisModule.name == "redis":
         @defer.inlineCallbacks
         def zrangebyscore(self, name, min, max, start=None, num=None,
                           withscores=False, score_cast_func=float):
@@ -942,7 +942,7 @@ class asyncRedis(object):
         ret = yield self.redis_conn.zremrangebyscore(name, min, max)
         defer.returnValue(ret)
 
-    if ASYNC:
+    if redisModule.name == "txredisapi":
         @defer.inlineCallbacks
         def zrevrange(self, name, start, end, withscores=False,
                       score_cast_func=float):
@@ -952,7 +952,7 @@ class asyncRedis(object):
             '''
             ret = yield self.redis_conn.zrevrange(name, start, end, withscores)
             defer.returnValue(ret)
-    else:
+    elif redisModule.name == "redis":
         @defer.inlineCallbacks
         def zrevrange(self, name, start, end, withscores=False,
                       score_cast_func=float):
@@ -964,7 +964,7 @@ class asyncRedis(object):
                                                   score_cast_func)
             defer.returnValue(ret)
 
-    if ASYNC:
+    if redisModule.name == "txredisapi":
         @defer.inlineCallbacks
         def zrevrangebyscore(self, name, max, min, start=None, num=None,
                              withscores=False, score_cast_func=float):
@@ -975,7 +975,7 @@ class asyncRedis(object):
             ret = yield self.redis_conn.zrevrangebyscore(name, max, min,
                              withscores,offset=start, count=num)
             defer.returnValue(ret)
-    else:
+    elif redisModule.name == "redis":
         @defer.inlineCallbacks
         def zrevrangebyscore(self, name, max, min, start=None, num=None,
                              withscores=False, score_cast_func=float):
@@ -1014,7 +1014,7 @@ class asyncRedis(object):
         ret = yield self.redis_conn.zunionstore(dest, keys, aggregate)
         defer.returnValue(ret)
 
-    if ASYNC:
+    if redisModule.name == "txredisapi":
         @defer.inlineCallbacks
         def zscan(self, name, cursor=0, match=None, count=None,
                   score_cast_func=float):
@@ -1024,7 +1024,7 @@ class asyncRedis(object):
             '''
             ret = yield self.redis_conn.zscan(name, cursor, match, count)
             defer.returnValue(ret)
-    else:
+    elif redisModule.name == "redis":
         @defer.inlineCallbacks
         def zscan(self, name, cursor=0, match=None, count=None,
                   score_cast_func=float):
