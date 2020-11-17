@@ -67,7 +67,6 @@ class MemCache:
         self._fk = 0
         self._admin = ""
         self._pk = str(pk)
-        self._lock = 0
         self.sync_count = 10
 
         self._key = None
@@ -133,20 +132,19 @@ class MemCache:
         '''
         检测对象是否被锁定
         '''
-        # return MemConnectionManager.getConnection().get(self.key+"_lock")
-        return False
+        # return MemConnectionManager.getConnection().get("_".join([self.key,"lock"]))
 
     def lock(self):
         '''
         锁定对象,暂定最长锁定时间为2S
         '''
-        # return MemConnectionManager.getConnection().set(self.key+"_lock", 1,2)
+        # return MemConnectionManager.getConnection().set("_".join([self.key,"lock"]), 1,2)
 
     def release(self):
         '''
         释放锁
         '''
-        # return MemConnectionManager.getConnection().delete(self.key+"_lock")
+        # return MemConnectionManager.getConnection().delete("_".join([self.key,"lock"]))
 
     def is_exist(self):
         return MemConnectionManager.getConnection().exist(self.key)
