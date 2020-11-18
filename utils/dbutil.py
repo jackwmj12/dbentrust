@@ -103,7 +103,6 @@ def EachQueryProps(props):
         return sqlstr
     else:
         raise Exception('props to query must be dict')
-        return
 
 def forEachQueryProps(sqlstr, props):
     '''
@@ -124,7 +123,6 @@ def forEachQueryProps(sqlstr, props):
             i += 1
     else:
         raise Exception('props to query must be list')
-        return
     return sqlstr
 
 def GetTableIncrValue(database,tablename):

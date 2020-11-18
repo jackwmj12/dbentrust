@@ -27,7 +27,10 @@ import tokenize
 from collections import Iterable
 from io import StringIO
 from twisted.internet import reactor, defer
-from firefly3.exts import async_sql
+
+from asyncsql import sqlPipeline
+
+async_sql = sqlPipeline()
 
 INSERT = 1
 DELETE = 2
@@ -200,7 +203,9 @@ class SQLProducer:
         return where
     
     def _get_insert_default_values_query(self, table):
-        return "INSERT INTO %s DEFAULT VALUES" % table
+        return """
+            INSERT INTO %s DEFAULT VALUES
+        """ % table
 
     @defer.inlineCallbacks
     def one(self):
