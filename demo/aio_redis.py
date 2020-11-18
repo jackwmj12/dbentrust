@@ -1,4 +1,4 @@
-import sys
+import sys,os
 
 import asyncio
 
@@ -21,7 +21,6 @@ class User(MemAdmin):
     def keys(self):
         return ("username",)
 
-
 class Book(MemObject):
     _tablename_ = "books:book"
     
@@ -32,7 +31,6 @@ class Book(MemObject):
     
     def keys(self):
         return ("bookname",)
-
 
 class UserBooks(MemRelation):
     _tablename_ = "books"
@@ -56,11 +54,13 @@ async def process():
 
 async def run():
     config = {
-        "REDIS_HOST": "redis://127.0.0.1",
+        "REDIS_HOST": os.environ.get("TEST_REDIS_HOST"),
+        "REDIS_PASSWORD": os.environ.get("TEST_REDIS_PASSWORD"),
     }
     await MemConnectionManager.initConnection(config)
     await process()
 
 
 if __name__ == '__main__':
-    asyncio.run(run())
+    # asyncio.run(run())
+    print(os.environ.keys() )

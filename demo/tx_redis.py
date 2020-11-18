@@ -62,7 +62,8 @@ def run():
 
 if __name__ == '__main__':
     config = {
-        "REDIS_HOST": "127.0.0.1",
+        "REDIS_HOST": os.environ.get("TEST_REDIS_HOST"),
+        "REDIS_PASSWORD": os.environ.get("TEST_REDIS_PASSWORD"),
     }
     MemConnectionManager.initConnection(config)
     
