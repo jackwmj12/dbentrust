@@ -48,7 +48,7 @@ class MemConnectionManager:
     @classmethod
     async def initConnection(cls,config):
         cls._connection = await create_redis_pool(
-            address=config.get('REDIS_HOST', 'redis://127.0.0.1'),
+            address="".join(["redis://",config.get('REDIS_HOST', '127.0.0.1')]),
             # port=config.get('REDIS_PORT', 6379),
             encoding="utf-8",
             password=config.get('REDIS_PASSWORD', None)

@@ -1,12 +1,14 @@
-import  sys
+import os,sys
+
+from utils import defer
+
+sys.path.append("../../")
 
 from twisted.internet import reactor
 
-sys.path.append("..")
+from redis_module import installRedis
 
-from redis_module import redisModule
-
-redisModule.install("txredisapi")
+installRedis("txredisapi")
 
 from memobject import *
 

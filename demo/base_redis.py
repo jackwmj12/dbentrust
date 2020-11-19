@@ -1,10 +1,10 @@
 
 import os,sys
-sys.path.append("..")
+sys.path.append("../../")
 
-from redis_module import redisModule
+from redis_module import installRedis
 
-redisModule.install("redis")
+installRedis("redis")
 
 from memobject import *
 

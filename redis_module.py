@@ -1,4 +1,7 @@
 
+def installRedis(name):
+	redisModule.install(name)
+
 class redisModule():
 	name = "txredisapi"
 

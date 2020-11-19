@@ -1,12 +1,10 @@
-import sys,os
 
-import asyncio
-
+import os,sys
 sys.path.append("..")
 
-from redis_module import redisModule
+from redis_module import installRedis
 
-redisModule.install("aioredis")
+installRedis("aioredis")
 
 from memobject import *
 
@@ -62,5 +60,7 @@ async def run():
 
 
 if __name__ == '__main__':
-    # asyncio.run(run())
-    print(os.environ.keys() )
+    import asyncio
+
+    asyncio.run(run())
+    # print(os.environ.keys() )
