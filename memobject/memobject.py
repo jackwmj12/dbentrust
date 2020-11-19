@@ -307,7 +307,17 @@ class MemObject(MemCache):
             return type(ret)
         else:
             return default
-    
+
+    def hmget2dic(self, name, *args):
+        '''
+		获取所有给定字段的值,并转换成dict
+		:param name:
+		:param args:
+		:return:
+		'''
+        ret = MemConnectionManager.getConnection().hmget(name, *args)
+        return dict(zip(*args, ret))
+
     def get_multi(self, *keys):
         '''
         一次获取本对象映射的哈希对象内的多个key的值

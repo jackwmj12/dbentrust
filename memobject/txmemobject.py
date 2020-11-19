@@ -314,7 +314,18 @@ class MemObject(MemCache):
             defer.returnValue(type(ret))
         else:
             defer.returnValue(default)
-    
+
+    @defer.inlineCallbacks
+    def hmget2dic(self, name, *args):
+        '''
+		获取所有给定字段的值,并转换成dict
+		:param name:
+		:param args:
+		:return:
+		'''
+        ret = yield MemConnectionManager.getConnection().hmget(name, *args)
+        defer.returnValue(dict(zip(*args, ret)))
+
     @defer.inlineCallbacks
     def get_multi(self, *keys):
         '''
