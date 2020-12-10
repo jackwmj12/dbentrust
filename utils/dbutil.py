@@ -21,8 +21,13 @@ Created on 2013-5-8
 @desc：
 
 '''
-
+import itertools
 from numbers import Number
+
+import pymysql
+from twisted.python import log
+
+pymysql.install_as_MySQLdb()
 
 def forEachPlusInsertProps(tablename, props):
     '''

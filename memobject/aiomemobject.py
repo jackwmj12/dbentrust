@@ -593,7 +593,7 @@ class MemAdmin(MemObject):
         '''
         super(MemAdmin, self).__init__(pk)
 
-    def build_leaf(self,leaf,fk,dict):
+    def build_leaf(self,leaf,fk,dict=None):
         '''
         创建 子节点 对象，且插入数据
         :param object: 外键连接对象（MemObject 及其子类）

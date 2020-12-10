@@ -28,10 +28,6 @@ from collections import Iterable
 from io import StringIO
 from twisted.internet import reactor, defer
 
-from asyncsql import sqlPipeline
-
-async_sql = sqlPipeline()
-
 INSERT = 1
 DELETE = 2
 UPDATE = 3

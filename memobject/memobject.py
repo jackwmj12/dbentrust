@@ -26,10 +26,11 @@ import redis
 from redis import Redis
 
 class MemConnectionManager:
-    _connection : Redis = None
+    # _connection : Redis = None
+    _connection = None
 
     @classmethod
-    def setConnection(cls,connection :Redis):
+    def setConnection(cls,connection):
         '''
         设置redis连接池
         :param connection asyncRedis
@@ -38,14 +39,14 @@ class MemConnectionManager:
         cls._connection = connection
 
     @classmethod
-    def getConnection(cls) -> Redis :
+    def getConnection(cls):
         '''
         获取redis连接池
         '''
         return cls._connection
     
     @classmethod
-    def initConnection(cls,config:Any):
+    def initConnection(cls,config):
         '''
         :return
         '''
@@ -542,7 +543,6 @@ class MemObject(MemCache):
         admins = []
         rets = []
         pattern = cls._tablename_ + ":*"
-        # pattern = cls._tablename_ +"[1,2,3,4,5,6,7,8,9,0]"
         while True:
             start, t_ = MemConnectionManager.getConnection().scan(start, pattern, count)
             if t_:

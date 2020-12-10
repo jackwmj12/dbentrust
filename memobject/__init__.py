@@ -23,12 +23,13 @@ Created on 2019-11-22
 '''
 
 from dbentrust.redis_module import redisModule
-if redisModule.name == "txredisapi":
+
+if redisModule.name == "aioredis":
+    # print("aioredis")
+    from dbentrust.memobject.aiomemobject import *
+elif redisModule.name == "txredisapi":
     # print("txredisapi")
     from dbentrust.memobject.txmemobject import *
 elif redisModule.name == "redis":
     # print("redis")
     from dbentrust.memobject.memobject import *
-elif redisModule.name == "aioredis":
-    # print("aioredis")
-    from dbentrust.memobject.aiomemobject import *
