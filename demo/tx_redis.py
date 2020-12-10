@@ -1,5 +1,6 @@
 import os,sys
 
+from memobject.txmemobject import MemAdmin, MemObject, MemRelation, MemConnectionManager
 from utils import defer
 
 sys.path.append("../../")

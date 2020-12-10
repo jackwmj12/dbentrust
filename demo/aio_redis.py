@@ -1,5 +1,8 @@
 
 import os,sys
+
+from memobject.aiomemobject import MemAdmin, MemObject, MemRelation, MemConnectionManager
+
 sys.path.append("..")
 
 from redis_module import installRedis
