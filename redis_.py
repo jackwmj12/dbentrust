@@ -1,9 +1,9 @@
 
-def installRedis(name):
+def install(name):
 	redisModule.install(name)
 
 class redisModule():
-	name = "redis"
+	name = "txredisapi"
 
 	@classmethod
 	def install(cls,name= "txredisapi"):

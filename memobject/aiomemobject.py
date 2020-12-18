@@ -25,7 +25,6 @@ from typing import Dict
 
 from aioredis import create_redis_pool, ConnectionsPool, Redis
 
-
 class MemConnectionManager:
     _connection  = None
 

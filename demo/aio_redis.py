@@ -1,13 +1,9 @@
 
 import os,sys
 
-from memobject.aiomemobject import MemAdmin, MemObject, MemRelation, MemConnectionManager
+from redis_ import install
 
-sys.path.append("..")
-
-from redis_module import installRedis
-
-installRedis("aioredis")
+install("aioredis")
 
 from memobject import *
 
@@ -39,7 +35,6 @@ class UserBooks(MemRelation):
     _root_ = User
     _leafs_ = [Book]
 
-
 async def process():
     user = User(1)
     user.username = "joe"
@@ -55,9 +50,10 @@ async def process():
 
 async def run():
     config = {
-        "REDIS_HOST": os.environ.get("TEST_REDIS_HOST"),
+        "REDIS_HOST": os.environ.get("TEST_REDIS_HOST").split("//")[1],
         "REDIS_PASSWORD": os.environ.get("TEST_REDIS_PASSWORD"),
     }
+
     await MemConnectionManager.initConnection(config)
     await process()
 

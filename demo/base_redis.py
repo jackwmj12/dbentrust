@@ -5,9 +5,9 @@ from memobject.memobject import MemAdmin, MemObject, MemRelation, MemConnectionM
 
 sys.path.append("../../")
 
-from redis_module import installRedis
+from redis_ import install
 
-installRedis("redis")
+install("redis")
 
 from memobject import *
 

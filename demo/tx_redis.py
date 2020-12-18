@@ -1,17 +1,14 @@
 import os,sys
 
-from memobject.txmemobject import MemAdmin, MemObject, MemRelation, MemConnectionManager
-from utils import defer
-
 sys.path.append("../../")
 
 from twisted.internet import reactor
 
-from redis_module import installRedis
+from dbentrust.redis_module import installRedis
 
 installRedis("txredisapi")
 
-from memobject import *
+from dbentrust.memobject import *
 
 class User(MemAdmin):
     _tablename_ = "user"
@@ -24,7 +21,6 @@ class User(MemAdmin):
     def keys(self):
         return ("username",)
 
-
 class Book(MemObject):
     _tablename_ = "books:book"
     
@@ -36,13 +32,11 @@ class Book(MemObject):
     def keys(self):
         return ("bookname",)
 
-
 class UserBooks(MemRelation):
     _tablename_ = "books"
     
     _root_ = User
     _leafs_ = [Book]
-
 
 @defer.inlineCallbacks
 def process():
@@ -65,9 +59,10 @@ def run():
 
 if __name__ == '__main__':
     config = {
-        "REDIS_HOST": os.environ.get("TEST_REDIS_HOST"),
+        "REDIS_HOST": os.environ.get("TEST_REDIS_HOST").split("//")[1],
         "REDIS_PASSWORD": os.environ.get("TEST_REDIS_PASSWORD"),
     }
+
     MemConnectionManager.initConnection(config)
     
     reactor.callWhenRunning(run)
