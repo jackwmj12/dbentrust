@@ -53,7 +53,7 @@ class MemConnectionManager:
         # if "//" in host:
         #     host = host.split("//")[1]
         cls._connection = redis.lazyConnectionPool(
-            host=host, password=config.get("REDIS_PASSWORD", None),
+            host=config.get("REDIS_HOST", "127.0.0.1"), password=config.get("REDIS_PASSWORD", None),
             port=config.get("REDIS_PORT", 6379), charset=config.get("REDIS_DECODE_RESPONSES", "utf-8"),
             connectTimeout=config.get("REDIS_CONNECT_TIMEOUT", 10),
             dbid=config.get("REDIS_DB_ID", None), poolsize=config.get("REDIS_POOL_SIZE", 3))
@@ -602,7 +602,7 @@ class MemObject(MemCache):
             if not start:
                 break
         ret = list(set(admins))
-        log.msg(ret)
+        # log.msg(ret)
         defer.returnValue(ret)
 
 class MemAdmin(MemObject):
@@ -1142,7 +1142,8 @@ class MemRelation(MemSet):
         :param leafs:
         :return:
         '''
-        self.append(*leafs)
+        ret = yield self.append(*leafs)
+        defer.returnValue(ret)
 
     def get_leafs_by_relation(self, start=0, pattern="*", count=500):
         '''
@@ -1164,7 +1165,7 @@ class MemRelation(MemSet):
             leaf_ = self.name2object(leafname)
             if leaf_:
                 leafs += yield leaf_.get_all2dic()
-        return leafs
+        defer.returnValue(leafs)
 
     def name2object(self, name):
         '''

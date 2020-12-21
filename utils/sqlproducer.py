@@ -28,6 +28,8 @@ from collections import Iterable
 from io import StringIO
 from twisted.internet import reactor, defer
 
+from firefly3.exts import tx_sql
+
 INSERT = 1
 DELETE = 2
 UPDATE = 3
@@ -214,7 +216,7 @@ class SQLProducer:
         clauses = [self.gen_clause(sql, val) for sql, val in self.sql_clauses if val is not None]
         query = SQLQuery.join(clauses)
         sql = query.query("pyformat")
-        ret = yield async_sql.runQuery(sql, query.values())
+        ret = yield tx_sql.runQuery(sql, query.values())
         defer.returnValue(ret[0])
 
     @defer.inlineCallbacks
@@ -227,7 +229,7 @@ class SQLProducer:
         clauses = [self.gen_clause(sql, val) for sql, val in self.sql_clauses if val is not None]
         query = SQLQuery.join(clauses)
         sql = query.query("pyformat")
-        ret = yield async_sql.runQuery(sql, query.values())
+        ret = yield tx_sql.runQuery(sql, query.values())
         defer.returnValue(ret)
     
     def insert(self, svars):
@@ -306,7 +308,7 @@ class SQLProducer:
                 query += ' WHERE ' + self._where(self._filter, self._svars)
         if query:
             sql = str(query)
-            return async_sql.runOperation(sql)
+            return tx_sql.runOperation(sql)
     
     @staticmethod
     def runQuery(sql, svars):
@@ -319,7 +321,7 @@ class SQLProducer:
         '''
         query = reparam(sql,dictionary=svars)
         sql = str(query.query("format"))
-        return async_sql.runQuery(sql=sql, args=(query.values()))
+        return tx_sql.runQuery(sql=sql, args=(query.values()))
    
     @staticmethod
     def runOperation(sql, svars):
@@ -331,7 +333,7 @@ class SQLProducer:
         '''
         query = reparam(sql, dictionary=svars)
         sql = str(query.query("format"))
-        return async_sql.runQuery(sql=sql, args=(query.values()))
+        return tx_sql.runQuery(sql=sql, args=(query.values()))
         
 class SQLQuery(object):
     """
@@ -766,7 +768,7 @@ if __name__ == '__main__':
     from twisted.internet import reactor, defer
     from firefly3.utils import DefferedErrorHandle
     
-    async_sql.init_app({
+    tx_sql.init_app({
         "DB_HOST": "",
         "DB_PASSWORD": "",
         "DB_NAME": ""

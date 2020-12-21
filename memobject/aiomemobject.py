@@ -308,11 +308,11 @@ class MemObject(MemCache):
 
     async def hmget2dic(self, name, *args):
         '''
-		获取所有给定字段的值,并转换成dict
-		:param name:
-		:param args:
-		:return:
-		'''
+        获取所有给定字段的值,并转换成dict
+        :param name:
+        :param args:
+        :return:
+        '''
         ret = await  MemConnectionManager.getConnection().hmget(name, *args)
         return dict(zip(*args, ret))
 
@@ -1081,7 +1081,7 @@ class MemRelation(MemSet):
         :param leafs:
         :return:
         '''
-        await self.append(*leafs)
+        return await self.append(*leafs)
 
     async def get_leafs_by_relation(self, start=0, pattern="*", count=500):
         '''
@@ -1097,12 +1097,12 @@ class MemRelation(MemSet):
 
         :return:
         '''
-        sensors = []
+        leafs = []
         for leafname in leafnames:
-            sensor_ = self.name2object(leafname)
-            if sensor_:
-                sensors += await sensor_.get_all2dic()
-        return sensors
+            leaf_ = self.name2object(leafname)
+            if leaf_:
+                leafs += await leaf_.get_all2dic()
+        return leafs
 
     def name2object(self, name):
         '''

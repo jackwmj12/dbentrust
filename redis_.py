@@ -1,5 +1,5 @@
 
-def install(name):
+def install(name="txredisapi"):
 	redisModule.install(name)
 
 class redisModule():
