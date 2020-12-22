@@ -1,12 +1,11 @@
 import os,sys
-
-sys.path.append("../../")
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from twisted.internet import reactor
 
-from dbentrust.redis_module import installRedis
+from dbentrust.redis_ import install
 
-installRedis("txredisapi")
+install("txredisapi")
 
 from dbentrust.memobject import *
 

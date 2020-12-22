@@ -1,15 +1,12 @@
 
 import os,sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from memobject.memobject import MemAdmin, MemObject, MemRelation, MemConnectionManager
-
-sys.path.append("../../")
-
-from redis_ import install
+from dbentrust.redis_ import install
 
 install("redis")
 
-from memobject import *
+from dbentrust.memobject import *
 
 class User(MemAdmin):
     _tablename_ = "user"
