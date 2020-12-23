@@ -21,6 +21,7 @@ Created on 2019-11-22
     通过key键的名称前缀来建立
     各个key-value 直接的关系
 '''
+import asyncio
 from typing import Dict
 
 from aioredis import create_redis_pool, ConnectionsPool, Redis
@@ -47,10 +48,11 @@ class MemConnectionManager:
     @classmethod
     async def initConnection(cls,config):
         cls._connection = await create_redis_pool(
-            address="".join(["redis://",config.get('REDIS_HOST', '127.0.0.1')]),
-            # port=config.get('REDIS_PORT', 6379),
+            "".join(["redis://",config.get('REDIS_HOST', '127.0.0.1')]),
+            minsize=config.get("REDIS_MINSIZE"),
+            maxsize=config.get("MAX_SIZE"),
             encoding="utf-8",
-            password=config.get('REDIS_PASSWORD', None)
+            password=config.get('REDIS_PASSWORD', None,loop=asyncio.get_event_loop())
         )
 
 class MemCache:
@@ -789,6 +791,7 @@ class MemSet(MemCache):
         :param
         '''
 
+        print(self.key)
         s = []
         while True:
             start, t_ = await MemConnectionManager.getConnection().sscan(self.key,start, pattern, count)
