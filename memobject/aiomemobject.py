@@ -27,10 +27,10 @@ from typing import Dict
 from aioredis import create_redis_pool, ConnectionsPool, Redis
 
 class MemConnectionManager:
-    _connection  = None
+    _connection = None
 
     @classmethod
-    def setConnection(cls,connection : Redis):
+    def setConnection(cls,connection):
         '''
         设置redis连接池
         :param connection asyncRedis
@@ -135,6 +135,7 @@ class MemCache:
         检测对象是否被锁定
         '''
         # return MemConnectionManager.getConnection().get("_".join([self.key,"lock"]))
+        return False
 
     async def lock(self):
         '''
@@ -147,6 +148,7 @@ class MemCache:
         释放锁
         '''
         # return MemConnectionManager.getConnection().delete("_".join([self.key,"lock"]))
+        return True
 
     async def is_exist(self):
         return await MemConnectionManager.getConnection().exists(self.key)
@@ -352,7 +354,7 @@ class MemObject(MemCache):
         :return: 字典
         '''
         keys = self.keys()
-        values = await MemConnectionManager.getConnection().hmget(self.key, keys)
+        values = await MemConnectionManager.getConnection().hmget(self.key, *keys)
         self.get_from_list(keys, values)
         return dict(self)
     
@@ -790,8 +792,6 @@ class MemSet(MemCache):
 
         :param
         '''
-
-        print(self.key)
         s = []
         while True:
             start, t_ = await MemConnectionManager.getConnection().sscan(self.key,start, pattern, count)

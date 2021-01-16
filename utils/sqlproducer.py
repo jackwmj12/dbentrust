@@ -835,8 +835,8 @@ if __name__ == '__main__':
     #     SELECT
     # 	device.id,
     # 	device.ser_num,
-    # 	device.config_date,
-    # 	device.parameter_num,
+    # 	device.config_version,
+    # 	device.parameter_version,
     # 	device.version,
     # 	ISNULL(device.location) AS location
     #     FROM
