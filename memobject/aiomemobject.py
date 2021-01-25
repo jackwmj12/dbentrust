@@ -284,7 +284,10 @@ class MemObject(MemCache):
     
     def __str__(self):
         return "<{}> : {} 数据为:\n {}".format(self._tablename_,self.key, dict(self))
-
+    
+    def __repr__(self):
+        return "<{}> : {}".format(self._tablename_, self.key)
+    
     @classmethod
     @property
     def name(self):
@@ -317,8 +320,8 @@ class MemObject(MemCache):
         :param args:
         :return:
         '''
-        ret = await  MemConnectionManager.getConnection().hmget(name, *args)
-        return dict(zip(*args, ret))
+        ret = await MemConnectionManager.getConnection().hmget(name, *args)
+        return dict(zip(args, ret))
 
     async def get_multi(self, *keys):
         '''
@@ -326,7 +329,7 @@ class MemObject(MemCache):
         @param keys: list(str) key的列表
         :return: dict
         '''
-        values = await MemConnectionManager.getConnection().hmget(self.key, keys)
+        values = await MemConnectionManager.getConnection().hmget(self.key, *keys)
         return self.get_from_list(keys, values)
     
     async def get_multi2dic(self, *keys):
@@ -335,7 +338,7 @@ class MemObject(MemCache):
         @param keys: list(str) key的列表
         :return: dict
         '''
-        values = await MemConnectionManager.getConnection().hmget(self.key, keys)
+        values = await MemConnectionManager.getConnection().hmget(self.key, *keys)
         self.get_from_list(keys, values)
         return {key:self.__getitem__(key) for key in keys}
         
@@ -387,7 +390,7 @@ class MemObject(MemCache):
             # Log.debug("字段检查通过")
             await self.lock()
             # Log.debug("拼接字段名称:{}".format(name))
-            ret = await MemConnectionManager.getConnection().hmset(self.key, mapping)
+            ret = await MemConnectionManager.getConnection().hmset_dict(self.key,**mapping)
             # Log.debug("设置字段值{}:{}".format(name,mapping))
             await self.release()
             # Log.debug("解锁字段")
@@ -805,23 +808,15 @@ class MemSet(MemCache):
         '''
         :param
         '''
-        if isinstance(objects, (list,tuple)):
-            if objects and isinstance(objects[0], MemCache):
-                values = [item.key for item in objects]
-            else:
-                values = objects
-        elif isinstance(objects,MemCache):
-            values = objects.key
-        else:
-            values = objects
-
+        args = [object.key if isinstance(object,MemCache) else object for object in objects]
+        
         locked = await self.locked()
         # Log.debug("检查字段是否被锁定")
         if not locked:
             # Log.debug("字段检查通过")
             await self.lock()
-
-            await MemConnectionManager.getConnection().srem(self.key,*values)
+            
+            await MemConnectionManager.getConnection().srem(self.key,*args)
 
             await self.release()
 

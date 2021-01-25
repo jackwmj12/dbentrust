@@ -74,8 +74,11 @@ class MemCache:
         self._key = None
 
     def __str__(self):
-        return "<{}> : {} ".format(self._tablename_,self.key)
-
+        return "<{}> : {} 数据为:\n {}".format(self._tablename_,self.key, dict(self))
+    
+    def __repr__(self):
+        return "<{}> : {}".format(self._tablename_, self.key)
+    
     def keys(self):
         '''
         返回一个tuple，该tuple决定了dict(self)所用到的键值
