@@ -1,13 +1,10 @@
 import os,sys
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from twisted.internet import reactor
 
-from dbentrust.redis_ import install
-
-install("txredisapi")
-
-from dbentrust.memobject import *
+from dbentrust.memobject.txmemobject import *
 
 class User(MemAdmin):
     _tablename_ = "user"

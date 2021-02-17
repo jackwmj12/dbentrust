@@ -2,11 +2,7 @@
 import os,sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from dbentrust.redis_ import install
-
-install("redis")
-
-from dbentrust.memobject import *
+from dbentrust.memobject.memobject import *
 
 class User(MemAdmin):
     _tablename_ = "user"

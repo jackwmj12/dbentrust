@@ -12,7 +12,7 @@ def installAioRedis():
 	redisModule.install("aioredis")
 
 class redisModule():
-	name = "txredisapi"
+	name = ""
 
 	@classmethod
 	def install(cls,name= "txredisapi"):
