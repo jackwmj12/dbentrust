@@ -1,8 +1,13 @@
 
 import os,sys
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from dbentrust.memobject.aiomemobject import *
+from dbentrust.main import installAioRedis
+
+installAioRedis()
+
+from dbentrust.memobject import *
 
 class User(MemAdmin):
     _tablename_ = "user"
@@ -44,16 +49,14 @@ async def process():
     ret = await user.get_all()
     print(ret)
 
-
 async def run():
     config = {
-        "REDIS_HOST": os.environ.get("TEST_REDIS_HOST").split("//")[1],
-        "REDIS_PASSWORD": os.environ.get("TEST_REDIS_PASSWORD"),
+        "REDIS_HOST": os.environ.get("HOST_OF_TEST"),
+        "REDIS_PASSWORD": os.environ.get("PASSWORD_OF_REDIS"),
     }
 
     await MemConnectionManager.initConnection(config)
     await process()
-
 
 if __name__ == '__main__':
     import asyncio

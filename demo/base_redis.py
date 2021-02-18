@@ -2,7 +2,11 @@
 import os,sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from dbentrust.memobject.memobject import *
+from dbentrust.main import installRedis
+
+installRedis()
+
+from dbentrust.memobject import *
 
 class User(MemAdmin):
     _tablename_ = "user"
@@ -36,8 +40,8 @@ class UserBooks(MemRelation):
 
 if __name__ == '__main__':
     config = {
-        "REDIS_HOST": os.environ.get("TEST_REDIS_HOST"),
-        "REDIS_PASSWORD": os.environ.get("TEST_REDIS_PASSWORD"),
+        "REDIS_HOST": os.environ.get("HOST_OF_TEST"),
+        "REDIS_PASSWORD": os.environ.get("PASSWORD_OF_REDIS"),
     }
     MemConnectionManager.initConnection(config)
     user = User(1)

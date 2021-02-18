@@ -49,10 +49,11 @@ class MemConnectionManager:
     async def initConnection(cls,config):
         cls._connection = await create_redis_pool(
             "".join(["redis://",config.get('REDIS_HOST', '127.0.0.1')]),
-            minsize=config.get("REDIS_MINSIZE"),
-            maxsize=config.get("MAX_SIZE"),
+            minsize=config.get("REDIS_MINSIZE",1),
+            maxsize=config.get("MAX_SIZE",10),
             encoding="utf-8",
-            password=config.get('REDIS_PASSWORD', None,loop=asyncio.get_event_loop())
+            password=config.get('REDIS_PASSWORD', None),
+            loop=asyncio.get_event_loop()
         )
 
 class MemCache:
@@ -1136,7 +1137,4 @@ class MemRelation(MemSet):
         '''
         if root:
             cls._root_ = root
-
-if __name__ == '__main__':
-    ''':param'''
 

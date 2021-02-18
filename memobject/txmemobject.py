@@ -1204,7 +1204,3 @@ class MemRelation(MemSet):
         '''
         if root:
             cls._root_ = root
-
-if __name__ == '__main__':
-    ''':param'''
-

@@ -2,9 +2,13 @@ import os,sys
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from twisted.internet import reactor
+from dbentrust.main import installTxRedis
 
-from dbentrust.memobject.txmemobject import *
+installTxRedis()
+
+from twisted.internet import reactor, defer
+
+from dbentrust.memobject import *
 
 class User(MemAdmin):
     _tablename_ = "user"
@@ -55,8 +59,8 @@ def run():
 
 if __name__ == '__main__':
     config = {
-        "REDIS_HOST": os.environ.get("TEST_REDIS_HOST").split("//")[1],
-        "REDIS_PASSWORD": os.environ.get("TEST_REDIS_PASSWORD"),
+        "REDIS_HOST": os.environ.get("HOST_OF_TEST"),
+        "REDIS_PASSWORD": os.environ.get("PASSWORD_OF_REDIS"),
     }
 
     MemConnectionManager.initConnection(config)

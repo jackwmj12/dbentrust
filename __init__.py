@@ -20,13 +20,3 @@ Created on 2019-11-22
 @desc：
     redis操作库的封装
 '''
-
-# def installRedis(name):
-# 	redisModule.install(name)
-#
-# class redisModule():
-# 	name = "txredisapi"
-#
-# 	@classmethod
-# 	def install(cls,name= "txredisapi"):
-# 		cls.name = name
