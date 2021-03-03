@@ -417,33 +417,6 @@ class MemObject(MemCache):
             # Log.err("incr:该字段被锁定")
             return None
     
-    def insert(self):
-        '''
-        插入本对象映射的哈希对象，并进行 _count 计数，调用 syncDB
-        '''
-        # return self._insert().addCallback(self.syncDB).addErrback(DefferedErrorHandle)
-        
-        locked = self.locked()
-        # Log.debug("检查字段是否被锁定")
-        if not locked:
-            # Log.debug("字段检查通过")
-            self.lock()
-            
-            nowdict = dict(self)
-            # Log.debug("拼接字段名称:{}".format(self.key))
-            MemConnectionManager.getConnection().hmset(self.key, nowdict)
-            # Log.debug("设置字段值{}".format(nowdict))
-            
-            count = MemConnectionManager.getConnection().hincrby(self.key, "_count", 1)
-            
-            self.release()
-            
-            self.syncDB(count)
-            
-            return True
-        else:
-            return False
-    
     def insert_without_sync(self):
         '''插入本对象映射的哈希对象
         '''
@@ -464,8 +437,35 @@ class MemObject(MemCache):
             return True
         else:
             return False
+
+    def insert(self, curd=None):
+        '''
+        插入本对象映射的哈希对象，并进行 _count 计数，调用 syncDB
+        '''
+        # return self._insert().addCallback(self.syncDB).addErrback(DefferedErrorHandle)
     
-    def syncDB(self, count):
+        locked = self.locked()
+        # Log.debug("检查字段是否被锁定")
+        if not locked:
+            # Log.debug("字段检查通过")
+            self.lock()
+        
+            nowdict = dict(self)
+            # Log.debug("拼接字段名称:{}".format(self.key))
+            MemConnectionManager.getConnection().hmset(self.key, nowdict)
+            # Log.debug("设置字段值{}".format(nowdict))
+        
+            count = MemConnectionManager.getConnection().hincrby(self.key, "_count", 1)
+        
+            self.release()
+        
+            self.syncDB(count, curd=curd)
+        
+            return True
+        else:
+            return False
+    
+    def syncDB(self, count,curd=None):
         '''
         本对象映射的哈希对象 内的数据同步到数据库
         :param count:
@@ -476,7 +476,7 @@ class MemObject(MemCache):
             if count >= self.sync_count:
                 # Log.debug("%s <%s>:已到同步时间：%s" % (self.__class__.__name__,self._pk, count))
                 self.update("_count", 0)
-                self.saveDB()
+                self.saveDB(curd=curd)
                 return True
             else:
                 # Log.debug("%s :还未到同步时间：%s" % (self.__class__.__name__, count))
@@ -485,7 +485,7 @@ class MemObject(MemCache):
             # Log.err("syncDB:该字段被锁定")
             return False
     
-    def saveDB(self):
+    def saveDB(self,curd=None):
         '''
         同步数据库操作，需要重写该函数
         :return:
@@ -625,7 +625,7 @@ class MemAdmin(MemObject):
         '''
         return relation(fk).setFK(self.key, self._pk)
     
-    def update_leaf(self, leaf, fk, dict):
+    def insert_leaf(self, leaf, fk, dict):
         '''
         插入/更新 子节点对象，且更新内存数据
         :param leaf: 外键连接对象
@@ -634,6 +634,16 @@ class MemAdmin(MemObject):
         :return:
         '''
         return leaf(fk).setFK(self.key, self._pk).get_from_dict(dict).insert()
+    
+    def update_leaf(self, leaf, fk, dict):
+        '''
+        插入/更新 子节点对象，且更新内存数据
+        :param leaf: 外键连接对象
+        :param fk: 子健标识
+        :param dict:   字典数据
+        :return:
+        '''
+        return leaf(fk).setFK(self.key, self._pk).update_multi(dict)
 
     def is_leaf_exits(self,leaf,fk):
         '''

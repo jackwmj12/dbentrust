@@ -425,7 +425,7 @@ class MemObject(MemCache):
         插入本对象映射的哈希对象，并进行 _count 计数，调用 syncDB
         '''
         # return self._insert().addCallback(self.syncDB).addErrback(DefferedErrorHandle)
-        
+
         locked = await self.locked()
         # Log.debug("检查字段是否被锁定")
         if not locked:
@@ -433,9 +433,9 @@ class MemObject(MemCache):
             await self.lock()
             
             nowdict = dict(self)
-            # Log.debug("拼接字段名称:{}".format(self.key))
-            await MemConnectionManager.getConnection().hmset_dict(self.key, nowdict)
+            # logger.debug("拼接字段名称:{}".format(self.key))
             # Log.debug("设置字段值{}".format(nowdict))
+            await MemConnectionManager.getConnection().hmset_dict(self.key, nowdict)
             
             count = await MemConnectionManager.getConnection().hincrby(self.key, "_count", 1)
             
@@ -631,7 +631,7 @@ class MemAdmin(MemObject):
         '''
         return relation(fk).setFK(self.key, self._pk)
     
-    async def update_leaf(self, leaf, fk, dict):
+    async def insert_leaf(self, leaf, fk, dict):
         '''
         插入/更新 子节点对象，且更新内存数据
         :param leaf: 外键连接对象
@@ -640,7 +640,17 @@ class MemAdmin(MemObject):
         :return:
         '''
         return await leaf(fk).setFK(self.key, self._pk).get_from_dict(dict).insert()
-
+    
+    async def update_leaf(self, leaf, fk, dict):
+        '''
+        插入/更新 子节点对象，且更新内存数据
+        :param leaf: 外键连接对象
+        :param fk: 子健标识
+        :param dict:   字典数据
+        :return:
+        '''
+        return await leaf(fk).setFK(self.key, self._pk).update_multi(dict)
+    
     async def is_leaf_exits(self,leaf,fk):
         '''
         :param leaf : 子健对象

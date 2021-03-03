@@ -437,7 +437,7 @@ class MemObject(MemCache):
             defer.returnValue(None)
     
     @defer.inlineCallbacks
-    def insert(self):
+    def insert(self,curd=None):
         '''
         插入本对象映射的哈希对象，并进行 _count 计数，调用 syncDB
         '''
@@ -458,7 +458,7 @@ class MemObject(MemCache):
             
             yield self.release()
             
-            yield self.syncDB(count)
+            yield self.syncDB(count,curd=curd)
             
             defer.returnValue(True)
         else:
@@ -487,7 +487,7 @@ class MemObject(MemCache):
             defer.returnValue(False)
     
     @defer.inlineCallbacks
-    def syncDB(self, count):
+    def syncDB(self, count,curd=None):
         '''
         本对象映射的哈希对象 内的数据同步到数据库
         :param count:
@@ -498,7 +498,7 @@ class MemObject(MemCache):
             if count >= self.sync_count:
                 # Log.debug("%s <%s>:已到同步时间：%s" % (self.__class__.__name__,self._pk, count))
                 yield self.update("_count", 0)
-                yield self.saveDB()
+                yield self.saveDB(curd=curd)
                 defer.returnValue(True)
             else:
                 # Log.debug("%s :还未到同步时间：%s" % (self.__class__.__name__, count))
@@ -508,7 +508,7 @@ class MemObject(MemCache):
             defer.returnValue(False)
     
     @defer.inlineCallbacks
-    def saveDB(self):
+    def saveDB(self,curd=None):
         '''
         同步数据库操作，需要重写该函数
         :return:
@@ -652,7 +652,7 @@ class MemAdmin(MemObject):
         '''
         return relation(fk).setFK(self.key, self._pk)
     
-    def update_leaf(self, leaf, fk, dict):
+    def insert_leaf(self, leaf, fk, dict):
         '''
         插入/更新 子节点对象，且更新内存数据
         :param leaf: 外键连接对象
@@ -661,7 +661,17 @@ class MemAdmin(MemObject):
         :return:
         '''
         return leaf(fk).setFK(self.key, self._pk).get_from_dict(dict).insert()
-
+    
+    def update_leaf(self, leaf, fk, dict):
+        '''
+        插入/更新 子节点对象，且更新内存数据
+        :param leaf: 外键连接对象
+        :param fk: 子健标识
+        :param dict:   字典数据
+        :return:
+        '''
+        return leaf(fk).setFK(self.key, self._pk).update_multi(dict)
+    
     def is_leaf_exits(self,leaf,fk):
         '''
         :param leaf : 子健对象
