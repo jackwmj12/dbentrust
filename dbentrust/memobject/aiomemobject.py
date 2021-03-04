@@ -22,6 +22,7 @@ Created on 2019-11-22
     各个key-value 直接的关系
 '''
 import asyncio
+import logging
 from typing import Dict
 
 from aioredis import create_redis_pool, ConnectionsPool, Redis
@@ -391,7 +392,7 @@ class MemObject(MemCache):
             # Log.debug("字段检查通过")
             await self.lock()
             # Log.debug("拼接字段名称:{}".format(name))
-            ret = await MemConnectionManager.getConnection().hmset_dict(self.key,**mapping)
+            ret = await MemConnectionManager.getConnection().hmset_dict(self.key,mapping)
             # Log.debug("设置字段值{}:{}".format(name,mapping))
             await self.release()
             # Log.debug("解锁字段")
@@ -457,10 +458,12 @@ class MemObject(MemCache):
         if not locked:
             # Log.debug("字段检查通过")
             await self.lock()
+            
             nowdict = dict(self)
-            # Log.debug("拼接字段名称:{}".format(name))
+            
+            # logging.debug("拼接字段名称:{}".format(self.key))
+            # logging.debug("字段值:{}".format(nowdict))
             await MemConnectionManager.getConnection().hmset_dict(self.key, nowdict)
-            # Log.debug("设置字段值{}:{}".format(key,value))
             
             await self.release()
             

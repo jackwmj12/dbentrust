@@ -437,7 +437,7 @@ class MemObject(MemCache):
             defer.returnValue(None)
     
     @defer.inlineCallbacks
-    def insert(self,curd=None):
+    def insert(self):
         '''
         插入本对象映射的哈希对象，并进行 _count 计数，调用 syncDB
         '''
@@ -458,7 +458,7 @@ class MemObject(MemCache):
             
             yield self.release()
             
-            yield self.syncDB(count,curd=curd)
+            yield self.syncDB(count)
             
             defer.returnValue(True)
         else:
@@ -487,7 +487,7 @@ class MemObject(MemCache):
             defer.returnValue(False)
     
     @defer.inlineCallbacks
-    def syncDB(self, count,curd=None):
+    def syncDB(self, count):
         '''
         本对象映射的哈希对象 内的数据同步到数据库
         :param count:
@@ -498,7 +498,7 @@ class MemObject(MemCache):
             if count >= self.sync_count:
                 # Log.debug("%s <%s>:已到同步时间：%s" % (self.__class__.__name__,self._pk, count))
                 yield self.update("_count", 0)
-                yield self.saveDB(curd=curd)
+                yield self.saveDB()
                 defer.returnValue(True)
             else:
                 # Log.debug("%s :还未到同步时间：%s" % (self.__class__.__name__, count))
@@ -508,7 +508,7 @@ class MemObject(MemCache):
             defer.returnValue(False)
     
     @defer.inlineCallbacks
-    def saveDB(self,curd=None):
+    def saveDB(self):
         '''
         同步数据库操作，需要重写该函数
         :return:

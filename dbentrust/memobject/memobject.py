@@ -427,6 +427,7 @@ class MemObject(MemCache):
         if not locked:
             # Log.debug("字段检查通过")
             self.lock()
+            
             nowdict = dict(self)
             # Log.debug("拼接字段名称:{}".format(name))
             MemConnectionManager.getConnection().hmset(self.key, nowdict)
@@ -438,7 +439,7 @@ class MemObject(MemCache):
         else:
             return False
 
-    def insert(self, curd=None):
+    def insert(self):
         '''
         插入本对象映射的哈希对象，并进行 _count 计数，调用 syncDB
         '''
@@ -459,13 +460,13 @@ class MemObject(MemCache):
         
             self.release()
         
-            self.syncDB(count, curd=curd)
+            self.syncDB(count)
         
             return True
         else:
             return False
     
-    def syncDB(self, count,curd=None):
+    def syncDB(self, count):
         '''
         本对象映射的哈希对象 内的数据同步到数据库
         :param count:
@@ -476,7 +477,7 @@ class MemObject(MemCache):
             if count >= self.sync_count:
                 # Log.debug("%s <%s>:已到同步时间：%s" % (self.__class__.__name__,self._pk, count))
                 self.update("_count", 0)
-                self.saveDB(curd=curd)
+                self.saveDB()
                 return True
             else:
                 # Log.debug("%s :还未到同步时间：%s" % (self.__class__.__name__, count))
@@ -485,7 +486,7 @@ class MemObject(MemCache):
             # Log.err("syncDB:该字段被锁定")
             return False
     
-    def saveDB(self,curd=None):
+    def saveDB(self):
         '''
         同步数据库操作，需要重写该函数
         :return:
