@@ -21,9 +21,11 @@ Created on 2019-11-22
     通过key键的名称前缀来建立
     各个key-value 直接的关系
 '''
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Union
 import redis
 from redis import Redis
+from dbentrust.utils.number import Number
+
 
 class MemConnectionManager:
     # _connection : Redis = None
@@ -192,7 +194,10 @@ class MemCache:
         return MemConnectionManager.getConnection().ttl(self.key)
     
     def __getitem__(self, item):
-        return getattr(self, item)
+        v = getattr(self, item)
+        if v == Number.NaN:
+            v = str(v)
+        return v
 
 class MemValue(MemCache):
     '''
@@ -339,7 +344,9 @@ class MemObject(MemCache):
         '''
         values = MemConnectionManager.getConnection().hmget(self.key, keys)
         self.get_from_list(keys, values)
-        return {key:self.__getitem__(key) for key in keys}
+        return {
+            key : getattr(self,key) for key in keys
+        }
     
     def get_all(self):
         '''
@@ -350,7 +357,7 @@ class MemObject(MemCache):
         values = MemConnectionManager.getConnection().hmget(self.key, keys)
         return self.get_from_list(keys, values)
 
-    def get_all2dic(self) -> Dict:
+    def get_all2dic(self) -> Union[Dict,Any]:
         '''
         获取本对象映射的哈希对象内的所有值（keys里面定义的所有值，而非getall）
         :return: 字典
@@ -460,11 +467,11 @@ class MemObject(MemCache):
         
             self.release()
         
-            self.syncDB(count)
+            ret = self.syncDB(count)
         
-            return True
+            return True,ret
         else:
-            return False
+            return False,False
     
     def syncDB(self, count):
         '''
@@ -479,12 +486,8 @@ class MemObject(MemCache):
                 self.update("_count", 0)
                 self.saveDB()
                 return True
-            else:
-                # Log.debug("%s :还未到同步时间：%s" % (self.__class__.__name__, count))
-                return False
-        else:
             # Log.err("syncDB:该字段被锁定")
-            return False
+        return False
     
     def saveDB(self):
         '''
@@ -608,7 +611,7 @@ class MemAdmin(MemObject):
             ret.get_from_dict(dict)
         return ret
     
-    def build_empty_leaf(self,leaf,fk=""):
+    def build_empty_leaf(self,leaf,fk="") -> Union[MemObject,Any]:
         '''
         创建 子节点 对象，不插入数据
         :param leaf:
@@ -1150,3 +1153,4 @@ class MemRelation(MemSet):
         if root:
             cls._root_ = root
 
+    

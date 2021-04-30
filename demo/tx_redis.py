@@ -4,7 +4,7 @@ from dbentrust.main import installTxRedis
 
 installTxRedis()
 
-from twisted.internet import reactor, defer
+from twisted.internet import defer
 
 from dbentrust.memobject import *
 
@@ -52,6 +52,7 @@ def process():
     # print(user.get_all())
 
 def run():
+    from twisted.internet import reactor
     process().addCallback(lambda ign: reactor.stop())
 
 

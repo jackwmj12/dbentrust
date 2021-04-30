@@ -23,9 +23,15 @@ Created on 2019-11-22
 '''
 import asyncio
 import logging
+import sys
 from typing import Dict
 
 from aioredis import create_redis_pool, ConnectionsPool, Redis
+
+from loguru import logger
+
+from dbentrust.utils.number import Number
+
 
 class MemConnectionManager:
     _connection = None
@@ -45,7 +51,13 @@ class MemConnectionManager:
         获取redis连接池
         '''
         return cls._connection
-
+    
+    @classmethod
+    async def getOrCreateConnection(cls,config):
+        if not cls._connection:
+            await cls.initConnection(config)
+        return cls._connection
+    
     @classmethod
     async def initConnection(cls,config):
         cls._connection = await create_redis_pool(
@@ -56,7 +68,10 @@ class MemConnectionManager:
             password=config.get('REDIS_PASSWORD', None),
             loop=asyncio.get_event_loop()
         )
-
+        if not await cls._connection.ping():
+            # logger.error("连接 Redis 超时")
+            sys.exit(0)
+            
 class MemCache:
     '''
      内存数据模型（value）
@@ -68,9 +83,9 @@ class MemCache:
         '''
         :param pk:主键，一般为数据库内的 id,或者设备名称，编号等唯一值
         '''
-        self._fk = 0
-        self._admin = ""
-        self._pk = str(pk)
+        self._fk = 0 # 外键
+        self._admin = "" # 父关键字
+        self._pk = str(pk) # 主键
         self.sync_count = 10
 
         self._key = None
@@ -193,8 +208,11 @@ class MemCache:
         return await  MemConnectionManager.getConnection().ttl(self.key)
     
     def __getitem__(self, item):
-        return getattr(self, item)
-
+        v = getattr(self, item)
+        if v == Number.NaN:
+            v = str(v)
+        return v
+    
 class MemValue(MemCache):
     '''
      内存数据模型（hash）
@@ -342,7 +360,9 @@ class MemObject(MemCache):
         '''
         values = await MemConnectionManager.getConnection().hmget(self.key, *keys)
         self.get_from_list(keys, values)
-        return {key:self.__getitem__(key) for key in keys}
+        return {
+            key:getattr(self,key) for key in keys
+        }
         
     async def get_all(self):
         '''
@@ -371,11 +391,11 @@ class MemObject(MemCache):
         # Log.debug("检查字段是否被锁定")
         if not locked:
             # Log.debug("字段检查通过")
-            await  self.lock()
+            await self.lock()
             # Log.debug("拼接字段名称:{}".format(name))
             ret = await MemConnectionManager.getConnection().hset(self.key, key, value)
             # Log.debug("设置字段值{}:{}".format(key,value))
-            await  self.release()
+            await self.release()
             # Log.debug("解锁字段")
             return ret
         else:
@@ -442,11 +462,11 @@ class MemObject(MemCache):
             
             await self.release()
             
-            await self.syncDB(count)
+            ret = await self.syncDB(count)
             
-            return True
+            return True,ret
         else:
-            return False
+            return False,False
     
     async def insert_without_sync(self):
         '''插入本对象映射的哈希对象
@@ -463,6 +483,7 @@ class MemObject(MemCache):
             
             # logging.debug("拼接字段名称:{}".format(self.key))
             # logging.debug("字段值:{}".format(nowdict))
+            
             await MemConnectionManager.getConnection().hmset_dict(self.key, nowdict)
             
             await self.release()
@@ -619,7 +640,7 @@ class MemAdmin(MemObject):
     def build_empty_leaf(self,leaf,fk=""):
         '''
         创建 子节点 对象，不插入数据
-        :param leaf:
+        :param leaf: emObject
         :param fk:
         :return:
         '''
@@ -1150,4 +1171,3 @@ class MemRelation(MemSet):
         '''
         if root:
             cls._root_ = root
-

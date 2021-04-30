@@ -22,8 +22,8 @@ Created on 2019-11-22
 import itertools
 from typing import Any
 
+from loguru import logger
 from twisted.enterprise import adbapi
-from twisted.python import log
 
 import pymysql
 pymysql.install_as_MySQLdb()
@@ -58,7 +58,7 @@ class ReconnectingMixin:
         except pymysql.OperationalError as e:
             if e.args[0] not in (2006, 2013):
                 raise
-            log.msg("MySQLdb: got error %s, retrying operation" % (e))
+            logger.debug("MySQLdb: got error %s, retrying operation" % (e))
             conn = self.connections.get(self.threadID())
             self.disconnect(conn)
             # try the interaction again
@@ -108,7 +108,7 @@ class MySQLReConnectionPool(adbapi.ConnectionPool):
            except pymysql.OperationalError as e:
                if e.args[0] not in (2006, 2013):
                    raise
-               log.err("Lost connection to MySQL, retrying operation.  If no errors follow, retry was successful.")
+               logger.error("Lost connection to MySQL, retrying operation.  If no errors follow, retry was successful.")
                conn = self.connections.get(self.threadID())
                self.disconnect(conn)
                return adbapi.ConnectionPool._runInteraction(self, interaction, *args, **kw)

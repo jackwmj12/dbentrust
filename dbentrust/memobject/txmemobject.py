@@ -28,6 +28,9 @@ from twisted.python import log
 from txredisapi import lazyConnectionPool,BaseRedisProtocol
 from twisted.internet import defer
 
+from dbentrust.utils.number import Number
+
+
 class MemConnectionManager:
     _connection : lazyConnectionPool = None
 
@@ -194,9 +197,12 @@ class MemCache:
 
     def ttl(self):
         return MemConnectionManager.getConnection().ttl(self.key)
-    
+
     def __getitem__(self, item):
-        return getattr(self, item)
+        v = getattr(self, item)
+        if v == Number.NaN:
+            v = str(v)
+        return v
 
 class MemValue(MemCache):
     '''
@@ -352,7 +358,9 @@ class MemObject(MemCache):
         '''
         values = yield MemConnectionManager.getConnection().hmget(self.key, keys)
         self.get_from_list(keys, values)
-        ret = {key:self.__getitem__(key) for key in keys}
+        ret = {
+            key:getattr(self,key) for key in keys
+        }
         defer.returnValue(ret)
     
     @defer.inlineCallbacks

@@ -26,7 +26,7 @@ import datetime
 import tokenize
 from collections import Iterable
 from io import StringIO
-from twisted.internet import reactor, defer
+from twisted.internet import defer
 
 from firefly3.exts import tx_sql
 

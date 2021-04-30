@@ -25,7 +25,7 @@ import itertools
 from numbers import Number
 
 import pymysql
-from twisted.python import log
+from loguru import logger
 
 pymysql.install_as_MySQLdb()
 

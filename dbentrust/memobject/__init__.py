@@ -25,10 +25,10 @@ Created on 2019-11-22
 from dbentrust.main import redisModule
 
 if redisModule.name == "aioredis":
-    from dbentrust.memobject.aiomemobject import *
+    from dbentrust.memobject.aiomemobject import MemConnectionManager, MemCache, MemValue, MemObject, MemAdmin, MemSet, MemList, MemSortedSet, MemRelation
 elif redisModule.name == "txredisapi":
-    from dbentrust.memobject.txmemobject import *
+    from dbentrust.memobject.txmemobject import MemConnectionManager, MemCache, MemValue, MemObject, MemAdmin, MemSet, MemList, MemSortedSet, MemRelation
 elif redisModule.name == "redis":
-    from dbentrust.memobject.memobject import *
+    from dbentrust.memobject.memobject import MemConnectionManager, MemCache, MemValue, MemObject, MemAdmin, MemSet, MemList, MemSortedSet, MemRelation
 
 __all__ = ["MemConnectionManager", "MemCache", "MemValue","MemObject","MemAdmin","MemSet","MemList","MemSortedSet","MemRelation"]
