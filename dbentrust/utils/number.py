@@ -25,6 +25,9 @@
 #
 #
 #
+from loguru import logger
+
+
 class NaN:
 	def __str__(self):
 		return "NaN"
@@ -33,23 +36,31 @@ class NaN:
 		return "NaN"
 	
 	def __gt__(self, other):
-		if not isinstance(other, int):
-			raise TypeError(" > 运算对象是int")
+		if isinstance(other,NaN):
+			return False
+		elif not isinstance(other, int):
+			raise TypeError(" > 运算对象是 int 或者 NaN")
 		return False
 	
 	def __lt__(self, other):
-		if not isinstance(other, int):
-			raise TypeError(" < 运算对象是int")
+		if isinstance(other,NaN):
+			return False
+		elif not isinstance(other, int):
+			raise TypeError(" < 运算对象是 int 或者 NaN")
 		return True
 	
 	def __ge__(self, other):
-		if not isinstance(other, int):
-			raise TypeError(" >= 运算对象是int")
+		if isinstance(other,NaN):
+			return True
+		elif not isinstance(other, int):
+			raise TypeError(" >= 运算对象是 int 或者 NaN")
 		return False
 	
 	def __le__(self, other):
+		if isinstance(other,NaN):
+			return True
 		if not isinstance(other, int):
-			raise TypeError(" <= 运算对象是int")
+			raise TypeError(" <= 运算对象是 int 或者 NaN")
 		return True
 	
 	def __add__(self, other):
@@ -114,6 +125,10 @@ class Number:
 __all__ = ["Number"]
 
 if __name__ == '__main__':
-	a = Number.NaN
-	print(int(a))
+	a = NaN()
+	b = NaN()
+	logger.debug(b > 1)
+	logger.debug(1 > b)
+	logger.debug(a > b)
+	# print(int(a))
 	# print(type(a))
