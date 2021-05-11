@@ -24,7 +24,6 @@ Created on 2019-11-22
 from typing import Dict
 
 import txredisapi as redis
-from twisted.python import log
 from txredisapi import lazyConnectionPool,BaseRedisProtocol
 from twisted.internet import defer
 
