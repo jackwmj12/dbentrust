@@ -54,7 +54,7 @@ class MemConnectionManager:
     
     @classmethod
     async def getOrCreateConnection(cls,config):
-        if not cls._connection:
+        if not cls._connection :
             await cls.initConnection(config)
         return cls._connection
     
