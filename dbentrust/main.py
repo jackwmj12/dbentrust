@@ -25,20 +25,3 @@
 #
 #
 #
-
-
-def installTxRedis():
-	redisModule.install("txredisapi")
-
-def installAioRedis():
-	redisModule.install("aioredis")
-
-def installRedis():
-	redisModule.install("redis")
-
-class redisModule():
-	name = ""
-
-	@classmethod
-	def install(cls,name= "txredisapi"):
-		cls.name = name

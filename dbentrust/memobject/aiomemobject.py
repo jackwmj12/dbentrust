@@ -22,14 +22,12 @@ Created on 2019-11-22
     各个key-value 直接的关系
 '''
 import asyncio
-import logging
 import sys
-from typing import Dict
+from typing import Dict, Union
 
 from aioredis import create_redis_pool, ConnectionsPool, Redis
 
 from loguru import logger
-
 from dbentrust.utils.number import Number
 
 
@@ -306,7 +304,7 @@ class MemObject(MemCache):
         return "<{}> : {} 数据为:\n {}".format(self._tablename_,self.key, dict(self))
     
     def __repr__(self):
-        return "<{}> : {}".format(self._tablename_, self.key)
+        return "<{}> : {}".format(self._tablename_, self._pk)
     
     @classmethod
     @property
@@ -445,18 +443,17 @@ class MemObject(MemCache):
         '''
         插入本对象映射的哈希对象，并进行 _count 计数，调用 syncDB
         '''
+        # logger.debug(self)
         # return self._insert().addCallback(self.syncDB).addErrback(DefferedErrorHandle)
-
         locked = await self.locked()
-        # Log.debug("检查字段是否被锁定")
+        # logger.debug("检查字段是否被锁定")
         if not locked:
-            # Log.debug("字段检查通过")
+            # logger.debug("字段检查通过")
             await self.lock()
             
             nowdict = dict(self)
-            # logger.debug("拼接字段名称:{}".format(self.key))
-            # Log.debug("设置字段值{}".format(nowdict))
-            await MemConnectionManager.getConnection().hmset_dict(self.key, nowdict)
+            
+            await MemConnectionManager.getConnection().hmset_dict(self.key, **nowdict)
             
             count = await MemConnectionManager.getConnection().hincrby(self.key, "_count", 1)
             
@@ -473,7 +470,7 @@ class MemObject(MemCache):
         '''
         # return self._insert().addCallback(self.syncDB).addErrback(DefferedErrorHandle)
         
-        locked = await  self.locked()
+        locked = await self.locked()
         # Log.debug("检查字段是否被锁定")
         if not locked:
             # Log.debug("字段检查通过")
@@ -481,8 +478,8 @@ class MemObject(MemCache):
             
             nowdict = dict(self)
             
-            # logging.debug("拼接字段名称:{}".format(self.key))
-            # logging.debug("字段值:{}".format(nowdict))
+            # logger.debug("拼接字段名称:{}".format(self.key))
+            # logger.debug("字段值:{}".format(nowdict))
             
             await MemConnectionManager.getConnection().hmset_dict(self.key, nowdict)
             
@@ -522,13 +519,15 @@ class MemObject(MemCache):
         '''
         return None
     
-    def get_from_dict(self, dic):
+    def get_from_dict(self, dic) -> Union[None,"MemObject"]:
         '''
         将字典内的值依次赋予自身
         :param dic:
         :return: self
         '''
+        
         for (k, v) in dic.items():
+            # logger.debug(f"k <{k}> -> v <{v}>")
             if v != None:
                 setattr(self, k, v)
         return self
@@ -585,11 +584,12 @@ class MemObject(MemCache):
                 break
         ret = list(set(admins))
         for item in ret:
-            split_item = item.split(":")
-            if len(split_item) == 2:
-                name_, id_ = split_item
+            name_, id_ = item.rsplit(":",1)
+            try:
                 ret_ = cls(id_)
                 rets.append(ret_)
+            except Exception as e:
+                pass
         return rets
 
     @classmethod
@@ -742,7 +742,7 @@ class MemAdmin(MemObject):
         relation = relation(pk).setFK(self.key, self._pk)
         return await relation.add_leafs_on_relation(*leafs)
         
-    async def scan_leafnames(self,leaf,start=0,count=1000):
+    async def scan_leafnames(self,leaf=None,start=0,count=1000):
         '''
         搜索所有和该对象相关的 leaf 对象，并返回key值
         :param start:
@@ -751,8 +751,11 @@ class MemAdmin(MemObject):
         :return:
         '''
         keys = []
-        leaf = leaf("").setFK(self.key,self._pk)
-        pattern = leaf.key+":"+"*"
+        if leaf:
+            leaf = leaf("").setFK(self.key,self._pk)
+            pattern = ":".join([leaf.key,"*"])
+        else:
+            pattern = ":".join([self.key,"*"])
         while True:
             start,t_ = await MemConnectionManager.getConnection().scan(start,pattern,count)
             if t_:
@@ -769,6 +772,8 @@ class MemAdmin(MemObject):
         :param count:
         :return:
         '''
+        if not leaf:
+            raise Exception("leaf object can not be none")
         leafs = []
         keys = await self.scan_leafnames(leaf, start, count)
         for key in keys:
@@ -838,7 +843,7 @@ class MemSet(MemCache):
             if not start:
                 break
         return list(s)
-
+    
     async def remove(self,*objects):
         '''
         :param
@@ -1171,3 +1176,5 @@ class MemRelation(MemSet):
         '''
         if root:
             cls._root_ = root
+
+_all__ = ["MemConnectionManager", "MemCache", "MemValue","MemObject","MemAdmin","MemSet","MemList","MemSortedSet","MemRelation"]
