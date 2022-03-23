@@ -28,7 +28,7 @@ from typing import Dict, Union
 from aioredis import create_redis_pool, ConnectionsPool, Redis
 
 from loguru import logger
-from dbentrust.utils.number import Number
+from dbentrust.utils.number import NaN
 
 
 class MemConnectionManager:
@@ -207,7 +207,7 @@ class MemCache:
     
     def __getitem__(self, item):
         v = getattr(self, item)
-        if v == Number.NaN:
+        if v == NaN:
             v = str(v)
         return v
     
@@ -229,14 +229,15 @@ class MemValue(MemCache):
     def __str__(self):
         return "<{}> : {} 数据为:\n {}".format(self._tablename_,self.key,self.value)
 
-    async def get_value(self):
+    async def get_value(self,default = None):
         '''
         针对单键值
         :return:
         '''
-        return await  MemConnectionManager.getConnection().get(self.key)
+        ret = await MemConnectionManager.getConnection().get(self.key)
+        return ret if ret else default
 
-    async def update_value(self, value):
+    async def update_value(self, value,expire= -1):
         '''
         修改本单个键值对象
         '''
@@ -246,7 +247,7 @@ class MemValue(MemCache):
             # Log.debug("字段检查通过")
             await self.lock()
             # Log.debug("拼接字段名称:{}".format(name))
-            ret = await  MemConnectionManager.getConnection().set(self.key, value)
+            ret = await  MemConnectionManager.getConnection().set(self.key, value,expire=expire)
             # Log.debug("设置字段值{}:{}".format(key,value))
             await self.release()
             # Log.debug("解锁字段")
@@ -260,10 +261,9 @@ class MemValue(MemCache):
         针对单键值
         :return:
         '''
-        self.value = await  MemConnectionManager.getConnection().get(self.key)
-        return self
+        return await  MemConnectionManager.getConnection().get(self.key)
 
-    async def update(self):
+    async def update(self,value ,expire= -1):
         '''
         修改本单个键值对象
         '''
@@ -273,7 +273,7 @@ class MemValue(MemCache):
             # Log.debug("字段检查通过")
             await  self.lock()
             # Log.debug("拼接字段名称:{}".format(name))
-            ret = await MemConnectionManager.getConnection().set(self.key, self.value)
+            ret = await MemConnectionManager.getConnection().set(self.key, value,expire= expire)
             # Log.debug("设置字段值{}:{}".format(key,value))
             await self.release()
             # Log.debug("解锁字段")

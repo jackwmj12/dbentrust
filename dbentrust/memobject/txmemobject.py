@@ -27,7 +27,7 @@ import txredisapi as redis
 from txredisapi import lazyConnectionPool,BaseRedisProtocol
 from twisted.internet import defer
 
-from dbentrust.utils.number import Number
+from dbentrust.utils.number import NaN
 
 
 class MemConnectionManager:
@@ -199,7 +199,7 @@ class MemCache:
 
     def __getitem__(self, item):
         v = getattr(self, item)
-        if v == Number.NaN:
+        if v == NaN:
             v = str(v)
         return v
 

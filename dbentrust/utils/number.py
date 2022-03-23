@@ -27,70 +27,76 @@
 #
 from loguru import logger
 
+from txrpc.utils.singleton import Singleton
+
+
 def isNum(inputNum):
 	if isinstance(inputNum, int) or isinstance(inputNum, float):
 		return True
 	return False
 
-class NaN:
-	
+class __NaN__(metaclass=Singleton):
+
 	def __str__(self):
 		return "NaN"
 	
 	def __repr__(self):
 		return "NaN"
-	
+
+	def __format__(self, format_spec):
+		return "NaN"
+
 	def __gt__(self, other):
-		if isinstance(other,NaN):
+		if isinstance(other,__NaN__):
 			return False
 		elif not isNum(other):
 			raise TypeError(" > 运算对象是 (int,NaN,float) ")
 		return False
 	
 	def __lt__(self, other):
-		if isinstance(other,NaN):
+		if isinstance(other,__NaN__):
 			return False
 		elif not isNum(other):
 			raise TypeError(" < 运算对象是 (int,NaN,float) ")
 		return True
 	
 	def __ge__(self, other):
-		if isinstance(other,NaN):
+		if isinstance(other,__NaN__):
 			return True
 		elif not isNum(other):
 			raise TypeError(" >= 运算对象是 (int,NaN,float) ")
 		return False
 	
 	def __le__(self, other):
-		if isinstance(other,NaN):
+		if isinstance(other,__NaN__):
 			return True
 		if not isNum(other):
 			raise TypeError(" <= 运算对象是 (int,NaN,float) ")
 		return True
 	
 	def __add__(self, other):
-		if isinstance(other,NaN):
+		if isinstance(other,__NaN__):
 			other = 0
 		if not isNum(other):
 			raise TypeError(" + 运算对象是 (int,NaN,float) ")
 		return 0 + other
 	
 	def __radd__(self, other):
-		if isinstance(other,NaN):
+		if isinstance(other,__NaN__):
 			other = 0
 		if not isNum(other):
 			raise TypeError(" + 运算对象是 (int,NaN,float) ")
 		return 0 + other
 	
 	def __sub__(self, other):
-		if isinstance(other,NaN):
+		if isinstance(other,__NaN__):
 			other = 0
 		elif not isNum(other):
 			raise TypeError(" - 运算对象是 (int,NaN,float) ")
 		return 0 - other
 	
 	def __rsub__(self, other):
-		if isinstance(other,NaN):
+		if isinstance(other,__NaN__):
 			other = 0
 		elif not isNum(other):
 			raise TypeError(" - 运算对象是 (int,NaN,float) ")
@@ -135,46 +141,67 @@ class NaN:
 	def __eq__(self, other):
 		if isinstance(other, str) and other == "NaN":
 			return True
-		elif isinstance(other, NaN):
+		elif isinstance(other, __NaN__):
 			return True
 		return False
+
+NaN = __NaN__()
+
+def checkNaN(number):
+	if number == NaN:
+		return True
+	return False
+
+def getInt(number):
+	if checkNaN(number):
+		return NaN
+	return int(number)
+
+def getFloat(number):
+	if checkNaN(number):
+		return NaN
+	return float(number)
+
+def get_int(number):
+	if checkNaN(number):
+		return 0
+	return int(number)
+
+def get_float(number):
+	if checkNaN(number):
+		return 0
+	return float(number)
 
 class Number:
-	NaN = NaN()
-	
+
 	def __int__(self, number):
-		if number == self.NaN:
-			return NaN()
+		if number == NaN:
+			return NaN
 		return number
 
-	@classmethod
-	def checkNaN(cls, number):
-		if number == cls.NaN:
-			return True
-		return False
-
-	@classmethod
-	def getInt(cls, number):
-		if cls.checkNaN(number):
-			return cls.NaN
-		return int(number)
-
-	@classmethod
-	def getFloat(cls, number):
-		if cls.checkNaN(number):
-			return cls.NaN
-		return float(number)
-
-__all__ = ["Number"]
+__all__ = ["isNum","NaN","Number","checkNaN","getInt","getFloat","get_int","get_float"]
 
 if __name__ == '__main__':
-	a = NaN()
-	b = NaN()
+	a = NaN
+	b = NaN
+	# NaN = "a"
+
+	# b = __NaN__()
+
+	# logger.debug(id(a))
+	# logger.debug(id(b))
+	# logger.debug(id(NaN))
+
 	logger.debug(b > 1)
 	logger.debug(1 > b)
 	logger.debug(a > b)
 	logger.debug(a//1)
 	logger.debug(a%1)
 	logger.debug(divmod(a,1))
-	# print(int(a))
-	# print(type(a))
+	logger.debug(int(a))
+	logger.debug(type(a))
+	logger.debug(checkNaN("NaN"))
+	logger.debug(getInt("NaN"))
+	logger.debug(get_int("NaN"))
+	logger.debug(getFloat("NaN"))
+	logger.debug(get_float("NaN"))

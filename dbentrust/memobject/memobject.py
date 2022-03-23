@@ -24,7 +24,7 @@ Created on 2019-11-22
 from typing import Dict, Any, List, Union
 import redis
 from redis import Redis
-from dbentrust.utils.number import Number
+from dbentrust.utils.number import NaN
 
 
 class MemConnectionManager:
@@ -195,7 +195,7 @@ class MemCache:
     
     def __getitem__(self, item):
         v = getattr(self, item)
-        if v == Number.NaN:
+        if v == NaN:
             v = str(v)
         return v
 
