@@ -40,7 +40,7 @@ class UserBooks(MemRelation):
 if __name__ == '__main__':
     config = {
         "REDIS_HOST": os.environ.get("HOST_OF_TEST"),
-        "REDIS_PASSWORD": os.environ.get("PASSWORD_OF_REDIS"),
+        "REDIS_PASSWORD": os.environ.get("PASSWORD_OF_ALI_REDIS"),
     }
     MemConnectionManager.initConnection(config)
     user = User(1)

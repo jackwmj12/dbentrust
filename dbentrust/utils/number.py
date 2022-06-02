@@ -152,6 +152,11 @@ def checkNaN(number):
 		return True
 	return False
 
+def isNaN(number):
+	if number == NaN:
+		return True
+	return False
+
 def getInt(number):
 	if checkNaN(number):
 		return NaN
@@ -179,7 +184,7 @@ class Number:
 			return NaN
 		return number
 
-__all__ = ["isNum","NaN","Number","checkNaN","getInt","getFloat","get_int","get_float"]
+__all__ = ["isNum","NaN","Number","checkNaN","isNaN","getInt","getFloat","get_int","get_float"]
 
 if __name__ == '__main__':
 	a = NaN
