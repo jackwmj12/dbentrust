@@ -40,7 +40,6 @@ class MemConnectionManager:
         设置redis连接池
         :param connection asyncRedis
         '''
-        # Log.debug("switch to {}".format(connection))
         cls._connection = connection
 
     @classmethod

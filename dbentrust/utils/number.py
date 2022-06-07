@@ -27,7 +27,7 @@
 #
 from loguru import logger
 
-from txrpc.utils.singleton import Singleton
+from dbentrust.utils.singleton import Singleton
 
 
 def isNum(inputNum):

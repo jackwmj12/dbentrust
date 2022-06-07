@@ -1,11 +1,7 @@
 
 import os
 
-from dbentrust.main import installAioRedis
-
-installAioRedis()
-
-from dbentrust.memobject import *
+from dbentrust.aiomemobject import *
 
 class User(MemAdmin):
     _tablename_ = "user"

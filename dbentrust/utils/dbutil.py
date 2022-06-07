@@ -1,26 +1,30 @@
-# coding:utf8
-'''
-Created on 2013-5-8
-
-@author: lan (www.9miao.com)
-            ┏┓　　　┏┓
-          ┏┛┻━━━┛┻┓
-          ┃　　　━　　　┃
-          ┃　┳┛　┗┳　┃
-          ┃　　　　　　　┃
-          ┃　　　┻　　　┃
-          ┗━┓　　　┏━┛
-              ┃　　　┃
-              ┃　　　┗━━━┓
-              ┃　　　　　　　┣┓
-              ┃　　　　　　　┏┛
-              ┗┓┓┏━┳┓┏┛
-                ┃┫┫　┃┫┫
-                ┗┻┛　┗┻┛
-                 神兽保佑，代码无BUG!
-@desc：
-
-'''
+# !/usr/bin/env Python3
+# -*- coding: utf-8 -*-
+# @Author   : joe lin
+# @FILE     : dbutil.py
+# @Time     : 2022-06-07 17:31
+# @Software : dbentrust
+# @Email    : jackwmj12@163.com
+# @Github   : 
+# @Desc     : 
+#            ┏┓      ┏┓
+#          ┏┛┻━━━┛┻┓
+#          ┃      ━      ┃
+#          ┃  ┳┛  ┗┳  ┃
+#          ┃              ┃
+#          ┃      ┻      ┃
+#          ┗━┓      ┏━┛
+#              ┃      ┃
+#              ┃      ┗━━━┓
+#              ┃              ┣┓
+#              ┃              ┏┛
+#              ┗┓┓┏━┳┓┏┛
+#                ┃┫┫  ┃┫┫
+#                ┗┻┛  ┗┻┛
+#                 神兽保佑，代码无BUG!
+#
+#
+#
 import itertools
 from numbers import Number
 
