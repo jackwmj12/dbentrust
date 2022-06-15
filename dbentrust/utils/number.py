@@ -31,11 +31,16 @@ from dbentrust.utils.singleton import Singleton
 
 
 def isNum(inputNum):
+	'''
+
+	:param inputNum:
+	:return:
+	'''
 	if isinstance(inputNum, int) or isinstance(inputNum, float):
 		return True
 	return False
 
-class __NaN__(metaclass=Singleton):
+class NaN(metaclass=Singleton):
 
 	def __str__(self):
 		return "NaN"
@@ -47,56 +52,56 @@ class __NaN__(metaclass=Singleton):
 		return "NaN"
 
 	def __gt__(self, other):
-		if isinstance(other,__NaN__):
+		if isinstance(other,self.__class__):
 			return False
 		elif not isNum(other):
 			raise TypeError(" > 运算对象是 (int,NaN,float) ")
 		return False
 	
 	def __lt__(self, other):
-		if isinstance(other,__NaN__):
+		if isinstance(other,self.__class__):
 			return False
 		elif not isNum(other):
 			raise TypeError(" < 运算对象是 (int,NaN,float) ")
 		return True
 	
 	def __ge__(self, other):
-		if isinstance(other,__NaN__):
+		if isinstance(other,self.__class__):
 			return True
 		elif not isNum(other):
 			raise TypeError(" >= 运算对象是 (int,NaN,float) ")
 		return False
 	
 	def __le__(self, other):
-		if isinstance(other,__NaN__):
+		if isinstance(other,self.__class__):
 			return True
 		if not isNum(other):
 			raise TypeError(" <= 运算对象是 (int,NaN,float) ")
 		return True
 	
 	def __add__(self, other):
-		if isinstance(other,__NaN__):
+		if isinstance(other,self.__class__):
 			other = 0
 		if not isNum(other):
 			raise TypeError(" + 运算对象是 (int,NaN,float) ")
 		return 0 + other
 	
 	def __radd__(self, other):
-		if isinstance(other,__NaN__):
+		if isinstance(other,self.__class__):
 			other = 0
 		if not isNum(other):
 			raise TypeError(" + 运算对象是 (int,NaN,float) ")
 		return 0 + other
 	
 	def __sub__(self, other):
-		if isinstance(other,__NaN__):
+		if isinstance(other,self.__class__):
 			other = 0
 		elif not isNum(other):
 			raise TypeError(" - 运算对象是 (int,NaN,float) ")
 		return 0 - other
 	
 	def __rsub__(self, other):
-		if isinstance(other,__NaN__):
+		if isinstance(other,self.__class__):
 			other = 0
 		elif not isNum(other):
 			raise TypeError(" - 运算对象是 (int,NaN,float) ")
@@ -141,13 +146,11 @@ class __NaN__(metaclass=Singleton):
 	def __eq__(self, other):
 		if isinstance(other, str) and other == "NaN":
 			return True
-		elif isinstance(other, __NaN__):
+		elif isinstance(other, self.__class__):
 			return True
 		elif other == None:
 			return True
 		return False
-
-NaN = __NaN__()
 
 def checkNaN(number):
 	if number == NaN:
