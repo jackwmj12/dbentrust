@@ -143,6 +143,8 @@ class __NaN__(metaclass=Singleton):
 			return True
 		elif isinstance(other, __NaN__):
 			return True
+		elif other == None:
+			return True
 		return False
 
 NaN = __NaN__()
