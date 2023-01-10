@@ -136,11 +136,7 @@ class MemCache:
         保证每次需要使用 _key 时，同一个对象只会生成一次，减少cpu消耗
         :return:
         '''
-        # Log.debug("使用_key")
         if not self._key:
-            # Log.debug("载入/重载_key")
-            # print("载入/重载_key")
-            # print(self._pk)
             self.produceKey()
         return self._key
 
@@ -179,18 +175,12 @@ class MemCache:
         删除本对象映射的hash对象
         '''
         locked = await self.locked()
-        # Log.debug("检查字段是否被锁定")
         if not locked:
-            # Log.debug("字段检查通过")
             await self.lock()
-            # Log.debug("拼接字段名称:{}".format(name))
             ret = await MemConnectionManager.getConnection().delete(self.key)
-            # Log.debug("设置字段值{}:{}".format(key,value))
             await self.release()
-            # Log.debug("解锁字段")
             return ret
         else:
-            # Log.err("mdelete:该字段被锁定")
             return False
 
     async def expire(self, ex=0):
@@ -458,7 +448,27 @@ class MemObject(MemCache):
         else:
             # Log.err("incr:该字段被锁定")
             return None
-    
+
+    async def incrbyfloat(self, key, delta: float):
+        '''
+        自增 本对象映射的哈希对象 的 _count 值，一般用于同步数据库
+        '''
+        locked = await self.locked()
+        # Log.debug("检查字段是否被锁定")
+        if not locked:
+            # Log.debug("字段检查通过")
+            await self.lock()
+
+            # Log.debug("拼接字段名称:{}".format(name))
+            ret = await  MemConnectionManager.getConnection().hincrbyfloat(self.key, key, delta)
+            # Log.debug("设置字段值{}:{}".format(key,value))
+            await self.release()
+            # Log.debug("解锁字段")
+            return ret
+        else:
+            # Log.err("incr:该字段被锁定")
+            return None
+
     async def insert(self):
         '''
         插入本对象映射的哈希对象，并进行 _count 计数，调用 syncDB
@@ -605,11 +615,12 @@ class MemObject(MemCache):
         ret = list(set(admins))
         for item in ret:
             name_, id_ = item.rsplit(":",1)
-            try:
-                ret_ = cls(id_)
-                rets.append(ret_)
-            except Exception as e:
-                pass
+            if name_ == cls._tablename_:
+                try:
+                    ret_ = cls(id_)
+                    rets.append(ret_)
+                except Exception as e:
+                    pass
         return rets
 
     @classmethod
