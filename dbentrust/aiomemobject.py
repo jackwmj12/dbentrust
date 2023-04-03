@@ -23,7 +23,7 @@ Created on 2019-11-22
 '''
 import asyncio
 import sys
-from typing import Dict, Union, List
+from typing import Dict, Union, List, TypeVar
 
 from aioredis import create_redis_pool, ConnectionsPool, Redis
 
@@ -59,6 +59,7 @@ class MemConnectionManager:
     async def initConnection(cls,config):
         cls._connection = await create_redis_pool(
             "".join(["redis://",config.get('REDIS_HOST', '127.0.0.1')]),
+            db= config.get("REDIS_DB",3),
             minsize=config.get("REDIS_MINSIZE",1),
             maxsize=config.get("MAX_SIZE",10),
             encoding="utf-8",
@@ -95,7 +96,7 @@ class MemCache:
         返回一个tuple，该tuple决定了dict(self)所用到的键值
         :return
         '''
-        return ()
+        raise NotImplementedError()
         
     def setPK(self, pk):
         '''
@@ -117,6 +118,18 @@ class MemCache:
         '''
         self._fk = str(fk)
         self._admin = str(admin) + ':'
+        self.produceKey()
+        return self
+
+    def setAdmin(self, admin):
+        '''
+        设置外键，若是关联数据，需要设置管理对象的id
+        :param admin: 关联的admin对象的key
+        :param fk :关联admin对象的pk
+        :return:
+        '''
+        self._fk = str(admin._pk)
+        self._admin = ':'.join([str(admin._tablename_),admin._pk]) + ":"
         self.produceKey()
         return self
 
@@ -207,7 +220,7 @@ class MemValue(MemCache):
     _tablename_ = "MemValue"
     _name_ = "MemValue"
 
-    def __init__(self, pk):
+    def __init__(self, pk=""):
         '''
         :param pk:主键，一般为数据库内的 id,或者设备名称，编号等唯一值
         '''
@@ -250,7 +263,7 @@ class MemValue(MemCache):
         针对单键值
         :return:
         '''
-        return await  MemConnectionManager.getConnection().get(self.key)
+        return await MemConnectionManager.getConnection().get(self.key)
 
     async def update(self,value ,expire= -1):
         '''
@@ -288,6 +301,7 @@ class MemObject(MemCache):
         :param pk:主键，一般为数据库内的 id,或者设备名称，编号等唯一值
         '''
         super(MemObject, self).__init__(pk)
+        self._is_loaded = False
     
     def __str__(self):
         return "<{}> : {} 数据为:\n {}".format(self._tablename_,self.key, dict(self))
@@ -339,7 +353,7 @@ class MemObject(MemCache):
         values = await MemConnectionManager.getConnection().hmget(self.key, *keys)
         return self.get_from_list(keys, values)
     
-    async def get_multi2dic(self,*keys,**alias_mapping: Union[Dict, None]):
+    async def get_multi2dic(self,with_out_nan= False ,*keys,**alias_mapping: Union[Dict, None]):
         '''
         一次获取本对象映射的哈希对象内的多个key的值
         @param keys: list(str) key的列表
@@ -347,24 +361,16 @@ class MemObject(MemCache):
         '''
         rs = {}
         values = await MemConnectionManager.getConnection().hmget(self.key, *keys)
-        for index, value in enumerate(values):
-            alias_key = alias_mapping.get(keys[index], None)
-            if alias_key:
-                rs[alias_key] = value
-            else:
-                rs[keys[index]] = value
-        return rs
-
-    async def get_multi2dic_without_nan(self, *keys,**alias_mapping: Union[Dict, None]):
-        '''
-        一次获取本对象映射的哈希对象内的多个key的值
-        @param keys: list(str) key的列表
-        :return: dict
-        '''
-        rs = {}
-        values = await MemConnectionManager.getConnection().hmget(self.key, *keys)
-        for index,value in enumerate(values):
-            if not isNaN(value):
+        if with_out_nan:
+            for index, value in enumerate(values):
+                if not isNaN(value):
+                    alias_key = alias_mapping.get(keys[index], None)
+                    if alias_key:
+                        rs[alias_key] = value
+                    else:
+                        rs[keys[index]] = value
+        else:
+            for index, value in enumerate(values):
                 alias_key = alias_mapping.get(keys[index], None)
                 if alias_key:
                     rs[alias_key] = value
@@ -379,7 +385,12 @@ class MemObject(MemCache):
         '''
         keys = self.keys()
         values = await MemConnectionManager.getConnection().hmget(self.key, *keys)
-        return self.get_from_list(keys, values)
+        instance = self.get_from_list(keys, values)
+        instance._is_loaded = True
+        return instance
+
+    def is_loaded(self):
+        return self._is_loaded
 
     async def get_all2dic(self) -> Dict:
         '''
@@ -525,7 +536,7 @@ class MemObject(MemCache):
         :param count:
         :return:
         '''
-        # Log.debug("%s count为：%s" % (self.__class__.__name__, count))
+        # logger.debug(f"{self.__class__.__name__}.{self.sync_count} count为：{count}")
         if count:
             if count >= self.sync_count:
                 # Log.debug("%s <%s>:已到同步时间：%s" % (self.__class__.__name__,self._pk, count))
@@ -555,7 +566,6 @@ class MemObject(MemCache):
         :param dic:
         :return: self
         '''
-        
         for (k, v) in dic.items():
             # logger.debug(f"k <{k}> -> v <{v}>")
             if v != None:
@@ -571,20 +581,6 @@ class MemObject(MemCache):
         for i, key in enumerate(keys):
             if values[i] != None:
                 setattr(self, key, values[i])
-        return self
-
-    def name2object(self, name):
-        '''
-        调用该函数可以通过redis中的key值
-        转换成对应的mem对象
-        子类需要重写才能实现该功能
-        :param name:
-        :return:
-        '''
-        name_ = name.split(self._tablename_ + ":")
-        self._pk = name_[1]
-        self._admin = name_[0]
-        self._key = name
         return self
     
     def get_data(self):
@@ -623,6 +619,20 @@ class MemObject(MemCache):
                     pass
         return rets
 
+    def name2object(self, name):
+        '''
+        调用该函数可以通过redis中的key值
+        转换成对应的mem对象
+        子类需要重写才能实现该功能
+        :param name:
+        :return:
+        '''
+        name_ = name.split(self._tablename_ + ":")
+        self._pk = name_[1]
+        self._admin = name_[0]
+        self._key = name
+        return self
+
     @classmethod
     async def scan2Name(cls, start=0, count=1000):
         '''
@@ -642,6 +652,25 @@ class MemObject(MemCache):
                 break
         return list(set(admins))
 
+    async def get_multi2dic_without_nan(self, *keys,**alias_mapping: Union[Dict, None]):
+        '''
+        一次获取本对象映射的哈希对象内的多个key的值
+        @param keys: list(str) key的列表
+        :return: dict
+        '''
+        rs = {}
+        values = await MemConnectionManager.getConnection().hmget(self.key, *keys)
+        for index,value in enumerate(values):
+            if not isNaN(value):
+                alias_key = alias_mapping.get(keys[index], None)
+                if alias_key:
+                    rs[alias_key] = value
+                else:
+                    rs[keys[index]] = value
+        return rs
+
+T = TypeVar("T")
+
 class MemAdmin(MemObject):
     '''
         内存数据模型（hash），一般用于admin模型
@@ -654,6 +683,18 @@ class MemAdmin(MemObject):
         :param pk :Mode主键，以此区分不同对象
         '''
         super(MemAdmin, self).__init__(pk)
+
+    def setAdmin(self, admin):
+        '''
+        设置外键，若是关联数据，需要设置管理对象的id
+        :param admin: 关联的admin对象的key
+        :param fk :关联admin对象的pk
+        :return:
+        '''
+        self._fk = admin._pk
+        self._admin = ":".join([admin._tablename_,admin._pk])
+        self.produceKey()
+        return self
 
     def build_leaf(self,leaf,fk,dict=None):
         '''
@@ -724,7 +765,6 @@ class MemAdmin(MemObject):
             ret = await leaf(pk).setFK(self.key,self._pk).get_all()
         else:
             ret = await leaf(pk).setFK(self.key,self._pk).get_multi(*keys)
-            # ret = leaf.get_from_dict(ret_)
         return ret
 
     async def get_leaf2dic(self,leaf,pk="",*keys):
@@ -738,7 +778,7 @@ class MemAdmin(MemObject):
         else:
             return await leaf(pk).setFK(self.key, self._pk).get_multi2dic(*keys)
         
-    async def get_leafs_by_relation(self,relation,pk="",start=0,pattern = "*",count=1000):
+    async def get_leafs_by_relation(self,relation, pk="",start=0,pattern = "*",count=1000):
         '''
         通过 relation 表 取出所有外键相关key名称
         :param relation_name:
@@ -1105,6 +1145,9 @@ class MemSortedSet(MemCache):
         else :
             raise Exception("mem type error")
         return await MemConnectionManager.getConnection().zscore(self.key,mem)
+
+    async def t(self, mems,sub_mems):
+        return await MemConnectionManager.getConnection().zinterstore()
 
     async def get_all(self, match="*", count=100, score_cast_func=float):
         '''
