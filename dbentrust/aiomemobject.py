@@ -72,14 +72,17 @@ class MemConnectionManager:
             
 class MemCache:
     '''
-     内存数据模型（value）
+        内存数据模型（value）
     '''
     _tablename_ = "Mem"
     _name_ = None
 
     def __init__(self, pk):
         '''
-        :param pk:主键，一般为数据库内的 id,或者设备名称，编号等唯一值
+            :param pk:主键，一般为数据库内的 id,或者设备名称，编号等唯一值
+            内存
+                _admin = {f_tablename_}:{_fk}
+                _key = {_admin}:{_tablename_}:{_pk}
         '''
         self._fk = 0 # 外键
         self._admin = "" # 父关键字
@@ -100,7 +103,7 @@ class MemCache:
         
     def setPK(self, pk):
         '''
-        设置ID
+            设置ID
         :param pk:
         :return:
         '''
@@ -111,7 +114,7 @@ class MemCache:
 
     def setFK(self, admin, fk):
         '''
-        设置外键，若是关联数据，需要设置管理对象的id
+            设置外键，若是关联数据，需要设置管理对象的id
         :param admin: 关联的admin对象的key
         :param fk :关联admin对象的pk
         :return:
@@ -129,7 +132,7 @@ class MemCache:
         :return:
         '''
         self._fk = str(admin._pk)
-        self._admin = ':'.join([str(admin._tablename_),admin._pk]) + ":"
+        self._admin = ':'.join([str(admin._tablename_),admin._pk,""])
         self.produceKey()
         return self
 
@@ -298,7 +301,7 @@ class MemObject(MemCache):
     
     def __init__(self, pk):
         '''
-        :param pk:主键，一般为数据库内的 id,或者设备名称，编号等唯一值
+            :param pk:主键，一般为数据库内的 id,或者设备名称，编号等唯一值
         '''
         super(MemObject, self).__init__(pk)
         self._is_loaded = False
